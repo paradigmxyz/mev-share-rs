@@ -38,10 +38,10 @@ pub struct EventTransaction {
 /// A log produced by a transaction.
 #[derive(Debug, Clone, Default, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct EventTransactionLog {
-    /// H160. the contract that emitted the log
+    /// The address of the contract that emitted the log
     pub address: Address,
-
-    /// topics: Array of 0 to 4 32 Bytes of indexed log arguments.
+    /// Topics of the log
+    ///
     /// (In solidity: The first topic is the hash of the signature of the event
     /// (e.g. `Deposit(address,bytes32,uint256)`), except you declared the event
     /// with the anonymous specifier.)
