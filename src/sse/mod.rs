@@ -1,18 +1,24 @@
 //! Server-sent events (SSE) support.
 
-use crate::types::Event;
 use async_sse::Decoder;
 use bytes::Bytes;
-use futures_util::stream::{IntoAsyncRead, MapErr, MapOk};
-use futures_util::{Stream, TryFutureExt, TryStreamExt};
+use futures_util::{
+    stream::{IntoAsyncRead, MapErr, MapOk},
+    Stream, TryFutureExt, TryStreamExt,
+};
 use pin_project_lite::pin_project;
 use reqwest::header::{self, HeaderMap, HeaderValue};
-use std::future::Future;
-use std::io;
-use std::pin::Pin;
-use std::task::{ready, Context, Poll};
-use std::time::Duration;
+use std::{
+    future::Future,
+    io,
+    pin::Pin,
+    task::{ready, Context, Poll},
+    time::Duration,
+};
 use tracing::{debug, trace, warn};
+
+mod types;
+pub use types::*;
 
 type TryIo = fn(reqwest::Error) -> io::Error;
 type TryOk = fn(async_sse::Event) -> serde_json::Result<EventOrRetry>;
@@ -36,14 +42,9 @@ impl EventClient {
     /// ```
     /// use mev_share_rs::EventClient;
     /// let client = EventClient::new(reqwest::Client::new());
-    ///
     /// ```
-    ///
     pub fn new(client: reqwest::Client) -> Self {
-        Self {
-            client,
-            max_retries: None,
-        }
+        Self { client, max_retries: None }
     }
 
     /// Subscribe to the MEV-share SSE endpoint.
@@ -53,15 +54,8 @@ impl EventClient {
         let st = new_stream(&self.client, endpoint).await?;
 
         let endpoint = endpoint.to_string();
-        let inner = SseEventStreamInner {
-            num_retries: 0,
-            endpoint,
-            client: self.clone(),
-        };
-        let st = SseEventStream {
-            inner,
-            state: Some(State::Active(Box::pin(st))),
-        };
+        let inner = SseEventStreamInner { num_retries: 0, endpoint, client: self.clone() };
+        let st = SseEventStream { inner, state: Some(State::Active(Box::pin(st))) };
 
         Ok(st)
     }
@@ -72,10 +66,7 @@ impl Default for EventClient {
         Self::new(
             reqwest::Client::builder()
                 .default_headers(HeaderMap::from_iter([
-                    (
-                        header::ACCEPT,
-                        HeaderValue::from_static("text/event-stream"),
-                    ),
+                    (header::ACCEPT, HeaderValue::from_static("text/event-stream")),
                     (header::CACHE_CONTROL, HeaderValue::from_static("no-cache")),
                 ]))
                 .build()
@@ -129,24 +120,20 @@ impl Stream for SseEventStream {
         let mut res = Poll::Pending;
 
         loop {
-            match this
-                .state
-                .take()
-                .expect("SseEventStream polled after completion")
-            {
+            match this.state.take().expect("SseEventStream polled after completion") {
                 State::End => return Poll::Ready(None),
                 State::Retry(mut fut) => match fut.as_mut().poll(cx) {
                     Poll::Ready(Ok(st)) => {
                         this.state = Some(State::Active(Box::pin(st)));
-                        continue;
+                        continue
                     }
                     Poll::Ready(Err(err)) => {
                         this.state = Some(State::End);
-                        return Poll::Ready(Some(Err(err)));
+                        return Poll::Ready(Some(Err(err)))
                     }
                     Poll::Pending => {
                         this.state = Some(State::Retry(fut));
-                        return Poll::Pending;
+                        return Poll::Pending
                     }
                 },
                 State::Active(mut st) => {
@@ -154,7 +141,7 @@ impl Stream for SseEventStream {
                     match st.as_mut().poll_next(cx) {
                         Poll::Ready(None) => {
                             this.state = Some(State::End);
-                            return Poll::Ready(None);
+                            return Poll::Ready(None)
                         }
                         Poll::Ready(Some(Ok(maybe_event))) => match maybe_event {
                             EventOrRetry::Event(event) => {
@@ -172,7 +159,7 @@ impl Stream for SseEventStream {
                                     client.retry().await
                                 });
                                 this.state = Some(State::Retry(fut));
-                                continue;
+                                continue
                             }
                         },
                         Poll::Ready(Some(Err(err))) => {
@@ -182,7 +169,7 @@ impl Stream for SseEventStream {
                         Poll::Pending => {}
                     }
                     this.state = Some(State::Active(st));
-                    break;
+                    break
                 }
             }
         }
@@ -222,13 +209,11 @@ impl SseEventStreamInner {
         self.num_retries += 1;
         if let Some(max_retries) = self.client.max_retries {
             if self.num_retries > max_retries {
-                return Err(SseError::MaxRetriesExceeded(max_retries));
+                return Err(SseError::MaxRetriesExceeded(max_retries))
             }
         }
         debug!(retries = self.num_retries, "retrying SSE stream");
-        new_stream(&self.client.client, &self.endpoint)
-            .map_err(SseError::RetryError)
-            .await
+        new_stream(&self.client.client, &self.endpoint).map_err(SseError::RetryError).await
     }
 }
 
