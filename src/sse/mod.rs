@@ -274,7 +274,7 @@ enum EventOrRetry {
 #[derive(Debug, thiserror::Error)]
 pub enum SseError {
     /// Failed to deserialize the SSE event data.
-    #[error("Failed to serialize serde JSON object")]
+    #[error("Failed to deserialize event: {0}")]
     SerdeJsonError(serde_json::Error),
     /// Connection related error
     #[error("{0}")]
