@@ -47,6 +47,12 @@ impl EventClient {
         Self { client, max_retries: None }
     }
 
+    /// Set the maximum number of retries.
+    pub fn with_max_retries(mut self, max_retries: u64) -> Self {
+        self.max_retries = Some(max_retries);
+        self
+    }
+
     /// Subscribe to the MEV-share SSE endpoint.
     ///
     /// This connects to the endpoint and returns a stream of events.
@@ -152,7 +158,6 @@ impl Stream for EventStream {
                                 res = Poll::Ready(Some(Ok(event)));
                             }
                             EventOrRetry::Retry(duration) => {
-                                this.inner.num_retries += 1;
                                 let mut client = this.inner.clone();
                                 let fut = Box::pin(async move {
                                     tokio::time::sleep(duration).await;
