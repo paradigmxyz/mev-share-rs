@@ -22,7 +22,7 @@ pub use types::*;
 
 type TryIo = fn(reqwest::Error) -> io::Error;
 type TryOk = fn(async_sse::Event) -> serde_json::Result<EventOrRetry>;
-type ReqStream = Pin<Box<dyn Stream<Item = reqwest::Result<Bytes>>>>;
+type ReqStream = Pin<Box<dyn Stream<Item = reqwest::Result<Bytes>> + Send>>;
 type SseDecoderStream = MapOk<Decoder<IntoAsyncRead<MapErr<ReqStream, TryIo>>>, TryOk>;
 
 /// The client for SSE.
@@ -195,7 +195,7 @@ impl std::fmt::Debug for EventStream {
 
 enum State {
     End,
-    Retry(Pin<Box<dyn Future<Output = Result<ActiveEventStream, SseError>>>>),
+    Retry(Pin<Box<dyn Future<Output = Result<ActiveEventStream, SseError>> + Send>>),
     Active(Pin<Box<ActiveEventStream>>),
 }
 
