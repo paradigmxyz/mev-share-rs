@@ -1,22 +1,23 @@
 //! MEV-share type bindings
 
-use ethers_core::abi::Address;
-use ethers_core::types::{Bytes, TxHash, H256};
-use ethers_core::utils::hex;
+use ethers_core::{
+    abi::Address,
+    types::{Bytes, TxHash, H256},
+    utils::hex,
+};
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
-use std::array::TryFromSliceError;
-use std::fmt::LowerHex;
-use std::ops::Deref;
+use std::{array::TryFromSliceError, fmt::LowerHex, ops::Deref};
 
 /// SSE event from the MEV-share endpoint
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct Event {
     /// Transaction or bundle hash.
     pub hash: TxHash,
-    /// Transactions from the event. If the event itself is a transaction, txs will only have one entry. Bundle events may have more.
+    /// Transactions from the event. If the event itself is a transaction, txs will only have one
+    /// entry. Bundle events may have more.
     #[serde(rename = "txs", with = "null_sequence")]
     pub transactions: Vec<EventTransaction>,
-    /// Logs from the event.
+    /// Event logs emitted by executing the transaction.
     #[serde(with = "null_sequence")]
     pub logs: Vec<EventTransactionLog>,
 }
@@ -37,10 +38,10 @@ pub struct EventTransaction {
 /// A log produced by a transaction.
 #[derive(Debug, Clone, Default, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct EventTransactionLog {
-    /// H160. the contract that emitted the log
+    /// The address of the contract that emitted the log
     pub address: Address,
-
-    /// topics: Array of 0 to 4 32 Bytes of indexed log arguments.
+    /// Topics of the log
+    ///
     /// (In solidity: The first topic is the hash of the signature of the event
     /// (e.g. `Deposit(address,bytes32,uint256)`), except you declared the event
     /// with the anonymous specifier.)
@@ -79,7 +80,7 @@ impl<'de> Deserialize<'de> for FunctionSelector {
             return Err(serde::de::Error::custom(format!(
                 "Expected 4 byte function selector: {}",
                 hex_str
-            )));
+            )))
         }
 
         let bytes = hex::decode(s).map_err(serde::de::Error::custom)?;
@@ -97,9 +98,7 @@ impl AsRef<[u8]> for FunctionSelector {
 
 impl std::fmt::Debug for FunctionSelector {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_tuple("FunctionSelector")
-            .field(&self.hex_encode())
-            .finish()
+        f.debug_tuple("FunctionSelector").field(&self.hex_encode()).finish()
     }
 }
 
@@ -145,8 +144,7 @@ impl PartialEq<[u8; 4]> for FunctionSelector {
 }
 
 mod null_sequence {
-    use serde::de::DeserializeOwned;
-    use serde::{Deserialize, Deserializer, Serialize, Serializer};
+    use serde::{de::DeserializeOwned, Deserialize, Deserializer, Serialize, Serializer};
 
     pub(crate) fn deserialize<'de, D, T>(deserializer: D) -> Result<Vec<T>, D::Error>
     where
