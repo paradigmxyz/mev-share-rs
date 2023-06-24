@@ -8,6 +8,7 @@ use futures_util::{
 };
 use pin_project_lite::pin_project;
 use reqwest::header::{self, HeaderMap, HeaderValue};
+use serde::de::DeserializeOwned;
 use std::{
     future::Future,
     io,
@@ -21,13 +22,13 @@ mod types;
 pub use types::*;
 
 type TryIo = fn(reqwest::Error) -> io::Error;
-type TryOk = fn(async_sse::Event) -> serde_json::Result<EventOrRetry>;
+type TryOk<T> = fn(async_sse::Event) -> serde_json::Result<EventOrRetry<T>>;
 type ReqStream = Pin<Box<dyn Stream<Item = reqwest::Result<Bytes>> + Send>>;
-type SseDecoderStream = MapOk<Decoder<IntoAsyncRead<MapErr<ReqStream, TryIo>>>, TryOk>;
+type SseDecoderStream<T> = MapOk<Decoder<IntoAsyncRead<MapErr<ReqStream, TryIo>>>, TryOk<T>>;
 
 /// The client for SSE.
 ///
-/// This is a simple wrapper around [reqwest::Client].
+/// This is a simple wrapper around [reqwest::Client] that provides subscription function for SSE.
 #[derive(Debug, Clone)]
 pub struct EventClient {
     client: reqwest::Client,
@@ -55,8 +56,13 @@ impl EventClient {
 
     /// Subscribe to the MEV-share SSE endpoint.
     ///
-    /// This connects to the endpoint and returns a stream of events.
-    pub async fn subscribe(&self, endpoint: &str) -> reqwest::Result<EventStream> {
+    /// This connects to the endpoint and returns a stream of `T` items.
+    ///
+    /// See [EventClient::events] for a more convenient way to subscribe to [Event] streams.
+    pub async fn subscribe<T: DeserializeOwned>(
+        &self,
+        endpoint: &str,
+    ) -> reqwest::Result<EventStream<T>> {
         let st = new_stream(&self.client, endpoint).await?;
 
         let endpoint = endpoint.to_string();
@@ -64,6 +70,13 @@ impl EventClient {
         let st = EventStream { inner, state: Some(State::Active(Box::pin(st))) };
 
         Ok(st)
+    }
+
+    /// Subscribe to a a stream of [Event]s.
+    ///
+    /// This is a convenience function for [EventClient::subscribe].
+    pub async fn events(&self, endpoint: &str) -> reqwest::Result<EventStream<Event>> {
+        self.subscribe(endpoint).await
     }
 }
 
@@ -81,22 +94,29 @@ impl Default for EventClient {
     }
 }
 
-/// A stream of SSE events.
+/// A stream of SSE items
 #[must_use = "streams do nothing unless polled"]
-pub struct EventStream {
+pub struct EventStream<T> {
     inner: EventStreamInner,
     /// State the stream is in
-    state: Option<State>,
+    state: Option<State<T>>,
 }
 
 // === impl EventStream ===
 
-impl EventStream {
+impl<T> EventStream<T> {
     /// The endpoint this stream is connected to.
     pub fn endpoint(&self) -> &str {
         &self.inner.endpoint
     }
 
+    /// Resets all retry attempts
+    pub fn reset_retries(&mut self) {
+        self.inner.num_retries = 0;
+    }
+}
+
+impl<T: DeserializeOwned> EventStream<T> {
     /// Retries the stream by establishing a new connection.
     pub async fn retry(&mut self) -> Result<(), SseError> {
         let st = self.inner.retry().await?;
@@ -111,15 +131,10 @@ impl EventStream {
         self.state = Some(State::Active(Box::pin(st)));
         Ok(())
     }
-
-    /// Resets all retry attempts
-    pub fn reset_retries(&mut self) {
-        self.inner.num_retries = 0;
-    }
 }
 
-impl Stream for EventStream {
-    type Item = Result<Event, SseError>;
+impl<T: DeserializeOwned> Stream for EventStream<T> {
+    type Item = Result<T, SseError>;
 
     fn poll_next(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
         let this = self.get_mut();
@@ -151,10 +166,6 @@ impl Stream for EventStream {
                         }
                         Poll::Ready(Some(Ok(maybe_event))) => match maybe_event {
                             EventOrRetry::Event(event) => {
-                                trace!(
-                                    message = serde_json::to_string(&event).unwrap(),
-                                    "received event"
-                                );
                                 res = Poll::Ready(Some(Ok(event)));
                             }
                             EventOrRetry::Retry(duration) => {
@@ -183,7 +194,7 @@ impl Stream for EventStream {
     }
 }
 
-impl std::fmt::Debug for EventStream {
+impl<T> std::fmt::Debug for EventStream<T> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("EventStream")
             .field("endpoint", &self.inner.endpoint)
@@ -193,10 +204,10 @@ impl std::fmt::Debug for EventStream {
     }
 }
 
-enum State {
+enum State<T> {
     End,
-    Retry(Pin<Box<dyn Future<Output = Result<ActiveEventStream, SseError>> + Send>>),
-    Active(Pin<Box<ActiveEventStream>>),
+    Retry(Pin<Box<dyn Future<Output = Result<ActiveEventStream<T>, SseError>>>>),
+    Active(Pin<Box<ActiveEventStream<T>>>),
 }
 
 #[derive(Clone)]
@@ -210,7 +221,7 @@ struct EventStreamInner {
 
 impl EventStreamInner {
     /// Create a new subscription stream.
-    async fn retry(&mut self) -> Result<ActiveEventStream, SseError> {
+    async fn retry<T: DeserializeOwned>(&mut self) -> Result<ActiveEventStream<T>, SseError> {
         self.num_retries += 1;
         if let Some(max_retries) = self.client.max_retries {
             if self.num_retries > max_retries {
@@ -224,14 +235,14 @@ impl EventStreamInner {
 
 pin_project! {
     /// A stream of SSE events.
-    struct ActiveEventStream {
+    struct ActiveEventStream<T> {
         #[pin]
-        st: SseDecoderStream
+        st: SseDecoderStream<T>
     }
 }
 
-impl Stream for ActiveEventStream {
-    type Item = Result<EventOrRetry, SseError>;
+impl<T: DeserializeOwned> Stream for ActiveEventStream<T> {
+    type Item = Result<EventOrRetry<T>, SseError>;
 
     fn poll_next(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
         let this = self.project();
@@ -253,15 +264,19 @@ impl Stream for ActiveEventStream {
     }
 }
 
-async fn new_stream(
+async fn new_stream<T: DeserializeOwned>(
     client: &reqwest::Client,
     endpoint: &str,
-) -> reqwest::Result<ActiveEventStream> {
+) -> reqwest::Result<ActiveEventStream<T>> {
     let resp = client.get(endpoint).send().await?;
     let map_io_err: TryIo = |e| io::Error::new(io::ErrorKind::Other, e);
-    let o: TryOk = |e| match e {
-        async_sse::Event::Message(m) => {
-            serde_json::from_slice::<Event>(m.data()).map(EventOrRetry::Event)
+    let o: TryOk<_> = |e| match e {
+        async_sse::Event::Message(msg) => {
+            trace!(
+                message = ?String::from_utf8_lossy(msg.data()),
+                "received message"
+            );
+            serde_json::from_slice::<T>(msg.data()).map(EventOrRetry::Event)
         }
         async_sse::Event::Retry(duration) => Ok(EventOrRetry::Retry(duration)),
     };
@@ -270,9 +285,9 @@ async fn new_stream(
     Ok(ActiveEventStream { st })
 }
 
-enum EventOrRetry {
+enum EventOrRetry<T> {
     Retry(Duration),
-    Event(Event),
+    Event(T),
 }
 
 /// Error variants that can occur while handling an SSE subscription,
