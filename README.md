@@ -10,7 +10,7 @@ This project is experimental and subject to frequent changes.
 
 See [examples/sse.rs](./examples/sse.rs) for an example of how to use the SSE client.
 
-Ref: [MEV-Share event-stream](https://github.com/flashbots/mev-share/blob/main/specs/event-stream.md)
+Ref: [MEV-Share event-stream](https://github.com/flashbots/mev-share/blob/main/specs/events/v0.1.md)
 
 
 ## License
