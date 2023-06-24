@@ -16,6 +16,7 @@ pub struct Event {
     /// Transactions from the event. If the event itself is a transaction, txs will only have one entry. Bundle events may have more.
     #[serde(rename = "txs", with = "null_sequence")]
     pub transactions: Vec<EventTransaction>,
+    /// Logs from the event.
     #[serde(with = "null_sequence")]
     pub logs: Vec<EventTransactionLog>,
 }

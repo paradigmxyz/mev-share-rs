@@ -10,4 +10,4 @@
 mod client;
 pub use client::*;
 
-mod types;
+pub mod types;
