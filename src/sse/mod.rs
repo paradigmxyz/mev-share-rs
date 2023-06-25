@@ -16,6 +16,8 @@ use std::{
     task::{ready, Context, Poll},
     time::Duration,
 };
+
+use serde::Serialize;
 use tracing::{debug, trace, warn};
 
 mod types;
@@ -63,10 +65,31 @@ impl EventClient {
         &self,
         endpoint: &str,
     ) -> reqwest::Result<EventStream<T>> {
-        let st = new_stream(&self.client, endpoint).await?;
+        let st = new_stream(&self.client, endpoint, None::<()>).await?;
 
         let endpoint = endpoint.to_string();
-        let inner = EventStreamInner { num_retries: 0, endpoint, client: self.clone() };
+        let inner =
+            EventStreamInner { num_retries: 0, endpoint, client: self.clone(), query: None };
+        let st = EventStream { inner, state: Some(State::Active(Box::pin(st))) };
+
+        Ok(st)
+    }
+
+    /// Subscribe to the MEV-share SSE endpoint with additional query params.
+    ///
+    /// This connects to the endpoint and returns a stream of `T` items.
+    ///
+    /// See [EventClient::events] for a more convenient way to subscribe to [Event] streams.
+    pub async fn subscribe_with_query<T: DeserializeOwned, S: Serialize>(
+        &self,
+        endpoint: &str,
+        query: S,
+    ) -> reqwest::Result<EventStream<T>> {
+        let query = Some(serde_json::to_value(query).expect("serialization failed"));
+        let st = new_stream(&self.client, endpoint, query.as_ref()).await?;
+
+        let endpoint = endpoint.to_string();
+        let inner = EventStreamInner { num_retries: 0, endpoint, client: self.clone(), query };
         let st = EventStream { inner, state: Some(State::Active(Box::pin(st))) };
 
         Ok(st)
@@ -75,8 +98,68 @@ impl EventClient {
     /// Subscribe to a a stream of [Event]s.
     ///
     /// This is a convenience function for [EventClient::subscribe].
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use futures_util::StreamExt;
+    /// use mev_share_rs::EventClient;
+    /// # async fn demo() {
+    ///   let client = EventClient::default();
+    ///   let mut stream = client.events("https://mev-share.flashbots.net").await.unwrap();
+    ///   while let Some(event) = stream.next().await {
+    ///    dbg!(&event);
+    ///   }
+    /// # }
+    /// ```
     pub async fn events(&self, endpoint: &str) -> reqwest::Result<EventStream<Event>> {
         self.subscribe(endpoint).await
+    }
+
+    /// Gets past events that were broadcast via the SSE event stream.
+    ///
+    /// Such as `https://mev-share.flashbots.net/api/v1/history`.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use mev_share_rs::EventClient;
+    /// use mev_share_rs::sse::EventHistoryParams;
+    /// # async fn demo() {
+    ///   let client = EventClient::default();
+    ///   let params = EventHistoryParams::default();
+    ///   let history = client.event_history("https://mev-share.flashbots.net/api/v1/history", params).await.unwrap();
+    ///   dbg!(&history);
+    /// # }
+    /// ```
+    pub async fn event_history(
+        &self,
+        endpoint: &str,
+        params: EventHistoryParams,
+    ) -> reqwest::Result<Vec<EventHistory>> {
+        self.client.get(endpoint).query(&params).send().await?.json().await
+    }
+
+    /// Gets information about the event history endpoint
+    ///
+    /// Such as `https://mev-share.flashbots.net/api/v1/history/info`.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use mev_share_rs::EventClient;
+    /// # async fn demo() {
+    ///   let client = EventClient::default();
+    ///   let info = client.event_history_info("https://mev-share.flashbots.net/api/v1/history/info").await.unwrap();
+    ///   dbg!(&info);
+    /// # }
+    /// ```
+    pub async fn event_history_info(&self, endpoint: &str) -> reqwest::Result<EventHistoryInfo> {
+        self.get_json(endpoint).await
+    }
+
+    async fn get_json<T: DeserializeOwned>(&self, endpoint: &str) -> reqwest::Result<T> {
+        self.client.get(endpoint).send().await?.json().await
     }
 }
 
@@ -162,6 +245,7 @@ impl<T: DeserializeOwned> Stream for EventStream<T> {
                     match st.as_mut().poll_next(cx) {
                         Poll::Ready(None) => {
                             this.state = Some(State::End);
+                            debug!("stream finished");
                             return Poll::Ready(None)
                         }
                         Poll::Ready(Some(Ok(maybe_event))) => match maybe_event {
@@ -215,6 +299,7 @@ struct EventStreamInner {
     num_retries: u64,
     endpoint: String,
     client: EventClient,
+    query: Option<serde_json::Value>,
 }
 
 // === impl EventStreamInner ===
@@ -229,7 +314,9 @@ impl EventStreamInner {
             }
         }
         debug!(retries = self.num_retries, "retrying SSE stream");
-        new_stream(&self.client.client, &self.endpoint).map_err(SseError::RetryError).await
+        new_stream(&self.client.client, &self.endpoint, self.query.as_ref())
+            .map_err(SseError::RetryError)
+            .await
     }
 }
 
@@ -264,11 +351,16 @@ impl<T: DeserializeOwned> Stream for ActiveEventStream<T> {
     }
 }
 
-async fn new_stream<T: DeserializeOwned>(
+async fn new_stream<T: DeserializeOwned, S: Serialize>(
     client: &reqwest::Client,
     endpoint: &str,
+    query: Option<S>,
 ) -> reqwest::Result<ActiveEventStream<T>> {
-    let resp = client.get(endpoint).send().await?;
+    let mut builder = client.get(endpoint);
+    if let Some(query) = query {
+        builder = builder.query(&query);
+    }
+    let resp = builder.send().await?;
     let map_io_err: TryIo = |e| io::Error::new(io::ErrorKind::Other, e);
     let o: TryOk<_> = |e| match e {
         async_sse::Event::Message(msg) => {
@@ -305,4 +397,35 @@ pub enum SseError {
     /// Request related error
     #[error("Exceeded all retries: {0}")]
     MaxRetriesExceeded(u64),
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use tracing_subscriber::{fmt, prelude::*, EnvFilter};
+
+    const HISTORY_V1: &str = "https://mev-share.flashbots.net/api/v1/history";
+    const HISTORY_INFO_V1: &str = "https://mev-share.flashbots.net/api/v1/history/info";
+
+    fn init_tracing() {
+        tracing_subscriber::registry()
+            .with(fmt::layer())
+            .with(EnvFilter::from_default_env())
+            .init();
+    }
+
+    #[tokio::test]
+    #[ignore]
+    async fn get_event_history_info() {
+        init_tracing();
+        let client = EventClient::default();
+        let _info = client.event_history_info(HISTORY_INFO_V1).await.unwrap();
+    }
+
+    #[tokio::test]
+    async fn get_event_history() {
+        init_tracing();
+        let client = EventClient::default();
+        let _history = client.event_history(HISTORY_V1, Default::default()).await.unwrap();
+    }
 }
