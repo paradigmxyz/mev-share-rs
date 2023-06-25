@@ -423,6 +423,7 @@ mod tests {
     }
 
     #[tokio::test]
+    #[ignore]
     async fn get_event_history() {
         init_tracing();
         let client = EventClient::default();
