@@ -65,11 +65,11 @@ pub struct EventHistoryInfo {
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct EventHistory {
-    /// The block number of the event's block
+    /// The block number of the event's block.
     pub block: u64,
-    /// The timestamp of the block
+    /// The timestamp when the event was emitted.
     pub timestamp: u64,
-    /// Hint for the historic block
+    /// Hint for the historic block.
     pub hint: Hint,
 }
 
