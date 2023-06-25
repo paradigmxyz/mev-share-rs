@@ -2,7 +2,7 @@
 
 use ethers_core::{
     abi::Address,
-    types::{Bytes, TxHash, H256},
+    types::{Bytes, TxHash, H256, U256},
     utils::hex,
 };
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
@@ -46,6 +46,110 @@ pub struct EventTransactionLog {
     /// (e.g. `Deposit(address,bytes32,uint256)`), except you declared the event
     /// with the anonymous specifier.)
     pub topics: Vec<H256>,
+}
+
+/// SSE event type of the event history endpoint.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+#[allow(missing_docs)]
+pub struct EventHistoryInfo {
+    pub count: u64,
+    pub min_block: u64,
+    pub max_block: u64,
+    pub min_timestamp: u64,
+    pub max_timestamp: u64,
+    pub max_limit: u64,
+}
+
+/// SSE event of the `history` endpoint
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct EventHistory {
+    /// The block number of the event's block
+    pub block: u64,
+    /// The timestamp of the block
+    pub timestamp: u64,
+    /// Hint for the historic block
+    pub hint: Hint,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+#[allow(missing_docs)]
+pub struct Hint {
+    #[serde(with = "null_sequence")]
+    pub txs: Vec<EventTransaction>,
+    pub hash: H256,
+    #[serde(with = "null_sequence")]
+    pub logs: Vec<EventTransactionLog>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub gas_used: Option<U256>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub mev_gas_price: Option<U256>,
+}
+
+/// Query params for the `history` endpoint
+#[derive(Default, Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(default, rename_all = "camelCase")]
+#[allow(missing_docs)]
+pub struct EventHistoryParams {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub block_start: Option<u64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub block_end: Option<u64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub timestamp_start: Option<u64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub timestamp_end: Option<u64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub limit: Option<u64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub offset: Option<u64>,
+}
+
+#[allow(missing_docs)]
+impl EventHistoryParams {
+    pub fn with_block_start(mut self, block_start: u64) -> Self {
+        self.block_start = Some(block_start);
+        self
+    }
+
+    pub fn with_block_end(mut self, block_end: u64) -> Self {
+        self.block_end = Some(block_end);
+        self
+    }
+
+    pub fn with_block_range(mut self, block_start: u64, block_end: u64) -> Self {
+        self.block_start = Some(block_start);
+        self.block_end = Some(block_end);
+        self
+    }
+
+    pub fn with_timestamp_start(mut self, timestamp_start: u64) -> Self {
+        self.timestamp_start = Some(timestamp_start);
+        self
+    }
+
+    pub fn with_timestamp_end(mut self, timestamp_end: u64) -> Self {
+        self.timestamp_end = Some(timestamp_end);
+        self
+    }
+
+    pub fn with_timestamp_range(mut self, timestamp_start: u64, timestamp_end: u64) -> Self {
+        self.timestamp_start = Some(timestamp_start);
+        self.timestamp_end = Some(timestamp_end);
+        self
+    }
+
+    pub fn with_limit(mut self, limit: u64) -> Self {
+        self.limit = Some(limit);
+        self
+    }
+
+    pub fn with_offset(mut self, offset: u64) -> Self {
+        self.offset = Some(offset);
+        self
+    }
 }
 
 /// 4-byte-function selector
@@ -143,6 +247,7 @@ impl PartialEq<[u8; 4]> for FunctionSelector {
     }
 }
 
+/// Deserializes missing or null sequences as empty vectors.
 mod null_sequence {
     use serde::{de::DeserializeOwned, Deserialize, Deserializer, Serialize, Serializer};
 
