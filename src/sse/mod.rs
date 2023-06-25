@@ -290,7 +290,7 @@ impl<T> std::fmt::Debug for EventStream<T> {
 
 enum State<T> {
     End,
-    Retry(Pin<Box<dyn Future<Output = Result<ActiveEventStream<T>, SseError>>>>),
+    Retry(Pin<Box<dyn Future<Output = Result<ActiveEventStream<T>, SseError>> + Send>>),
     Active(Pin<Box<ActiveEventStream<T>>>),
 }
 
