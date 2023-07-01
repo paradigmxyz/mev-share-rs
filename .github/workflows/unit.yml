@@ -1,0 +1,50 @@
+on:
+  pull_request:
+  merge_group:
+
+env:
+  RUSTFLAGS: -D warnings
+  CARGO_TERM_COLOR: always
+  SEED: rustethereumethereumrust
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}
+  cancel-in-progress: true
+
+name: unit
+jobs:
+  test:
+    name: test (partition ${{ matrix.partition }}/${{ strategy.job-total }})
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        partition: [1, 2]
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v3
+      - name: Install toolchain
+        uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          cache-on-failure: true
+
+      - name: Install latest nextest release
+        uses: taiki-e/install-action@nextest
+
+      - name: Run tests
+        run: |
+          cargo nextest run \
+            --locked --workspace --all-features \
+            --partition hash:${{ matrix.partition }}/${{ strategy.job-total }} \
+            -E 'kind(lib)' -E 'kind(bin)' -E 'kind(proc-macro)'
+
+  doc-test:
+    name: rustdoc
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Install toolchain
+        uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - name: Run doctests
+        run: cargo test --doc --all --all-features
