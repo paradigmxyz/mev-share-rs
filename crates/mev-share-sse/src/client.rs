@@ -1,5 +1,6 @@
 //! Server-sent events (SSE) support.
 
+use crate::types::*;
 use async_sse::Decoder;
 use bytes::Bytes;
 use futures_util::{
@@ -8,7 +9,7 @@ use futures_util::{
 };
 use pin_project_lite::pin_project;
 use reqwest::header::{self, HeaderMap, HeaderValue};
-use serde::de::DeserializeOwned;
+use serde::{de::DeserializeOwned, Serialize};
 use std::{
     future::Future,
     io,
@@ -16,12 +17,7 @@ use std::{
     task::{ready, Context, Poll},
     time::Duration,
 };
-
-use serde::Serialize;
 use tracing::{debug, trace, warn};
-
-mod types;
-pub use types::*;
 
 type TryIo = fn(reqwest::Error) -> io::Error;
 type TryOk<T> = fn(async_sse::Event) -> serde_json::Result<EventOrRetry<T>>;
@@ -124,7 +120,7 @@ impl EventClient {
     ///
     /// ```
     /// use mev_share_sse::EventClient;
-    /// use mev_share_sse::sse::EventHistoryParams;
+    /// use mev_share_sse::EventHistoryParams;
     /// # async fn demo() {
     ///   let client = EventClient::default();
     ///   let params = EventHistoryParams::default();
