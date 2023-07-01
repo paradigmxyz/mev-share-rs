@@ -1,33 +1,25 @@
-[package]
-name = "mev-share-rs"
-version = "0.1.0"
-authors = ["Matthias Seitz <matthias.seitz@outlook.de>"]
-edition = "2021"
-license = "MIT OR Apache-2.0"
-readme = "README.md"
-homepage = "https://github.com/mattsse/mev-share-rs"
-repository = "https://github.com/mattsse/mev-share-rs"
-description = "MEV-share protocol support in rust"
+[workspace]
+members = [
+    "crates/mev-share-sse",
+    "crates/mev-share-rpc-api",
 
-[dependencies]
+    # Internal
+    "examples"
+]
+
+# Explicitly set the resolver to version 2, which is the default for packages with edition >= 2021
+# https://doc.rust-lang.org/edition-guide/rust-2021/default-cargo-resolver.html
+resolver = "2"
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.70"
+authors = ["Matthias Seitz <matthias.seitz@outlook.de>"]
+license = "MIT OR Apache-2.0"
+homepage = "https://github.com/mattsse/mev-share-rs"
+repository ="https://github.com/mattsse/mev-share-rs"
+
+[workspace.dependencies]
 ## eth
 ethers-core = { version = "2.0", default-features = false }
-
-## async
-async-sse = "5.1"
-reqwest = { version = "0.11", features = ["stream", "json"] }
-futures-util = { version = "0.3", features = ["io"] }
-http-types = { version = "2.12", default-features = false }
-
-## misc
-bytes = "1.4"
-serde = { version = "1.0", features = ["derive"] }
-thiserror = "1.0"
-pin-project-lite = "0.2"
-serde_json = "1.0"
-tokio = { version = "1", features = ["time"] }
-tracing = "0.1"
-
-[dev-dependencies]
-tokio = { version = "1", features = ["macros", "rt", "rt-multi-thread"] }
-tracing-subscriber = { version = "0.3", default-features = false, features = ["env-filter", "fmt"] }

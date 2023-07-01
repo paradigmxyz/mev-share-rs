@@ -1,0 +1,19 @@
+[package]
+name = "examples"
+version = "0.0.0"
+publish = false
+edition = "2021"
+
+[dependencies]
+mev-share-sse = { path = "../crates/mev-share-sse" }
+
+## async
+tokio = { version = "1", features = ["macros", "rt", "rt-multi-thread"] }
+futures-util = { version = "0.3" }
+
+tracing-subscriber = { version = "0.3", default-features = false, features = ["env-filter", "fmt"] }
+
+
+[[example]]
+name = "sse"
+path = "sse.rs"

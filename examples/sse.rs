@@ -1,6 +1,6 @@
 //! Basic SSE example
 use futures_util::StreamExt;
-use mev_share_rs::EventClient;
+use mev_share_sse::EventClient;
 use tracing_subscriber::{fmt, prelude::*, EnvFilter};
 
 #[tokio::main]
