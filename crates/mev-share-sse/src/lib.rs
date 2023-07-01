@@ -7,5 +7,8 @@
 
 //! Rust client implementation for the [MEV-share protocol](https://github.com/flashbots/mev-share)
 
-pub mod sse;
-pub use sse::EventClient;
+pub mod client;
+pub use client::EventClient;
+
+mod types;
+pub use types::*;
