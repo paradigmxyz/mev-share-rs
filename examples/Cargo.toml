@@ -6,10 +6,12 @@ edition = "2021"
 
 [dependencies]
 mev-share-sse = { path = "../crates/mev-share-sse" }
+mev-share-rpc-api = { path = "../crates/mev-share-rpc-api", features = ["client", "server"] }
 
 ## async
 tokio = { version = "1", features = ["macros", "rt", "rt-multi-thread"] }
 futures-util = { version = "0.3" }
+jsonrpsee = { version = "0.18", features = ["client", "async-client"] }
 
 tracing-subscriber = { version = "0.3", default-features = false, features = ["env-filter", "fmt"] }
 
@@ -17,3 +19,6 @@ tracing-subscriber = { version = "0.3", default-features = false, features = ["e
 [[example]]
 name = "sse"
 path = "sse.rs"
+[[example]]
+name = "rpc-client"
+path = "rpc-client.rs"
