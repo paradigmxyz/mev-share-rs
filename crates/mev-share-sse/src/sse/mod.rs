@@ -43,7 +43,7 @@ impl EventClient {
     /// Create a new client with the given reqwest client.
     ///
     /// ```
-    /// use mev_share_rs::EventClient;
+    /// use mev_share_sse::EventClient;
     /// let client = EventClient::new(reqwest::Client::new());
     /// ```
     pub fn new(client: reqwest::Client) -> Self {
@@ -103,7 +103,7 @@ impl EventClient {
     ///
     /// ```
     /// use futures_util::StreamExt;
-    /// use mev_share_rs::EventClient;
+    /// use mev_share_sse::EventClient;
     /// # async fn demo() {
     ///   let client = EventClient::default();
     ///   let mut stream = client.events("https://mev-share.flashbots.net").await.unwrap();
@@ -123,8 +123,8 @@ impl EventClient {
     /// # Example
     ///
     /// ```
-    /// use mev_share_rs::EventClient;
-    /// use mev_share_rs::sse::EventHistoryParams;
+    /// use mev_share_sse::EventClient;
+    /// use mev_share_sse::sse::EventHistoryParams;
     /// # async fn demo() {
     ///   let client = EventClient::default();
     ///   let params = EventHistoryParams::default();
@@ -147,7 +147,7 @@ impl EventClient {
     /// # Example
     ///
     /// ```
-    /// use mev_share_rs::EventClient;
+    /// use mev_share_sse::EventClient;
     /// # async fn demo() {
     ///   let client = EventClient::default();
     ///   let info = client.event_history_info("https://mev-share.flashbots.net/api/v1/history/info").await.unwrap();
