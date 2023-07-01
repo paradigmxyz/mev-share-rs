@@ -3,6 +3,7 @@ name = "mev-share-rpc-api"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
+authors.workspace = true
 license.workspace = true
 homepage.workspace = true
 repository.workspace = true
@@ -11,3 +12,13 @@ MEV-share RPC API trait definitions
 """
 
 [dependencies]
+## eth
+ethers-core.workspace = true
+
+## misc
+jsonrpsee = { version = "0.18", features = ["server", "macros"] }
+
+[features]
+default = ["client"]
+client = ["jsonrpsee/client"]
+server = ["jsonrpsee/server"]

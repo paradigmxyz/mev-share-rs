@@ -6,3 +6,28 @@
 ))]
 
 //! MEV-Share RPC interface definitions
+
+/// `mev` namespace
+mod mev;
+
+/// re-export of all server traits
+#[cfg(feature = "server")]
+pub use servers::*;
+
+/// Aggregates all server traits.
+#[cfg(feature = "server")]
+#[doc(hidden)]
+pub mod servers {
+    pub use crate::mev::MevApiServer;
+}
+
+/// re-export of all client traits
+#[cfg(feature = "client")]
+pub use clients::*;
+
+/// Aggregates all client traits.
+#[cfg(feature = "client")]
+#[doc(hidden)]
+pub mod clients {
+    pub use crate::mev::MevApiClient;
+}
