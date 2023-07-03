@@ -4,7 +4,7 @@ use ethers_core::types::{Bytes, U64, TxHash, Address};
 use serde::{Deserialize, Serialize};
 
 /// A bundle of transactions to send to the matchmaker.
-#[derive(Clone, Debug, Default, Serialize, Deserialize)]
+#[derive(Clone, Debug, Default, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct SendBundleRequest {
     /// The version of the MEV-share API to use.
@@ -25,7 +25,7 @@ pub struct SendBundleRequest {
 }
 
 /// Data used by block builders to check if the bundle should be considered for inclusion.
-#[derive(Clone, Debug, Default, Serialize, Deserialize)]
+#[derive(Clone, Debug, Default, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct InclusionPredicate {
     /// The first block the bundle is valid for.
@@ -36,7 +36,7 @@ pub struct InclusionPredicate {
 }
 
 /// A bundle tx, which can either be a transaction hash, or a full tx.
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
 #[serde(untagged)]
 #[serde(rename_all = "camelCase")]
 pub enum BundleItem {
@@ -58,10 +58,13 @@ pub enum BundleItem {
         /// Params for the bundle.
         bundle: SendBundleRequest,
     },
+    /// By specifying an empty object in the body array, searchers can specify if, and where, 
+    /// other transactions may be included with relation to their bundle.
+    AllowBackrun { }
 }
 
 /// Requirements for the bundle to be included in the block.
-#[derive(Clone, Debug, Default, Serialize, Deserialize)]
+#[derive(Clone, Debug, Default, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct ValidityPredicate {
     /// Specifies the minimum percent of a given bundle's earnings to redistribute 
@@ -76,7 +79,7 @@ pub struct ValidityPredicate {
 
 /// Specifies the minimum percent of a given bundle's earnings to redistribute
 /// for it to be included in a builder's block.
-#[derive(Clone, Debug, Default, Serialize, Deserialize)]
+#[derive(Clone, Debug, Default, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct Refund {
     /// The index of the transaction in the bundle.
@@ -87,7 +90,7 @@ pub struct Refund {
 
 /// Specifies what addresses should receive what percent of the overall refund for this bundle,
 /// if it is enveloped by another bundle (eg. a searcher backrun).
-#[derive(Clone, Debug, Default, Serialize, Deserialize)]
+#[derive(Clone, Debug, Default, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct RefundConfig {
     /// The address to refund.
@@ -97,7 +100,7 @@ pub struct RefundConfig {
 }
 
 /// Preferences on what data should be shared about the bundle and its transactions
-#[derive(Clone, Debug, Default, Serialize, Deserialize)]
+#[derive(Clone, Debug, Default, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct PrivacyPredicate {
     /// Hints on what data should be shared about the bundle and its transactions
@@ -109,7 +112,7 @@ pub struct PrivacyPredicate {
 }
 
 /// Hints on what data should be shared about the bundle and its transactions
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "snake_case")]
 pub enum PrivacyHint {
     /// The calldata of the transaction.
@@ -127,7 +130,7 @@ pub enum PrivacyHint {
 
 
 /// Response from the matchmaker after sending a bundle.
-#[derive(Deserialize, Debug, Serialize, Clone)]
+#[derive(Deserialize, Debug, Serialize, Clone, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct SendBundleResponse {
     /// Hash of the bundle bodies.
@@ -135,7 +138,7 @@ pub struct SendBundleResponse {
 }
 
 /// The version of the MEV-share API to use.
-#[derive(Deserialize, Debug, Serialize, Clone, Default)]
+#[derive(Deserialize, Debug, Serialize, Clone, Default, PartialEq)]
 pub enum ProtocolVersion {
     #[default]
     #[serde(rename = "beta-1")]
@@ -169,7 +172,11 @@ impl SendBundleRequest {
 
 #[cfg(test)]
 mod tests {
-    use crate::types::SendBundleRequest;
+    use std::str::FromStr;
+
+    use ethers_core::types::Bytes;
+
+    use crate::{types::SendBundleRequest, types::ProtocolVersion, InclusionPredicate, BundleItem, ValidityPredicate, RefundConfig, PrivacyPredicate, PrivacyHint};
 
     #[test]
     fn can_deserialize_simple() {
@@ -187,5 +194,93 @@ mod tests {
         "#;
         let res: Result<Vec<SendBundleRequest>, _> = serde_json::from_str(str);
         assert!(res.is_ok());
+    }
+
+    #[test]
+    fn can_deserialize_complex() {
+        let str = r#"
+        [{
+            "version": "v0.1",
+            "inclusion": {
+                "block": "0x1"
+            },
+            "body": [{
+                "tx": "0x02f86b0180843b9aca00852ecc889a0082520894c87037874aed04e51c29f582394217a0a2b89d808080c080a0a463985c616dd8ee17d7ef9112af4e6e06a27b071525b42182fe7b0b5c8b4925a00af5ca177ffef2ff28449292505d41be578bebb77110dfc09361d2fb56998260",
+                "canRevert": false
+            }], 
+            "privacy": {
+                "hints": [
+                  "calldata"
+                ]
+              },
+              "validity": {
+                "refundConfig": [
+                  {
+                    "address": "0x8EC1237b1E80A6adf191F40D4b7D095E21cdb18f",
+                    "percent": 100
+                  }
+                ]
+              }
+        }]
+        "#;
+        let res: Result<Vec<SendBundleRequest>, _> = serde_json::from_str(str);
+        assert!(res.is_ok());
+    }
+
+    #[test]
+    fn can_serialize_complex() {
+        let str = r#"
+        [{
+            "version": "v0.1",
+            "inclusion": {
+                "block": "0x1"
+            },
+            "body": [{
+                "tx": "0x02f86b0180843b9aca00852ecc889a0082520894c87037874aed04e51c29f582394217a0a2b89d808080c080a0a463985c616dd8ee17d7ef9112af4e6e06a27b071525b42182fe7b0b5c8b4925a00af5ca177ffef2ff28449292505d41be578bebb77110dfc09361d2fb56998260",
+                "canRevert": false
+            }], 
+            "privacy": {
+                "hints": [
+                  "calldata"
+                ]
+              },
+              "validity": {
+                "refundConfig": [
+                  {
+                    "address": "0x8EC1237b1E80A6adf191F40D4b7D095E21cdb18f",
+                    "percent": 100
+                  }
+                ]
+              }
+        }]
+        "#;
+        let bundle_body = vec![BundleItem::Tx {
+            tx: Bytes::from_str("0x02f86b0180843b9aca00852ecc889a0082520894c87037874aed04e51c29f582394217a0a2b89d808080c080a0a463985c616dd8ee17d7ef9112af4e6e06a27b071525b42182fe7b0b5c8b4925a00af5ca177ffef2ff28449292505d41be578bebb77110dfc09361d2fb56998260").unwrap(),
+            can_revert: false,
+        }];
+
+        let validity_predicate = ValidityPredicate {
+            refund_config: Some(vec![RefundConfig {
+                address: "0x8EC1237b1E80A6adf191F40D4b7D095E21cdb18f".parse().unwrap(),
+                percent: 100,
+            }]),
+            ..Default::default()
+        };
+        let privacy_predicate = PrivacyPredicate {
+            hints: Some(vec![PrivacyHint::Calldata]),
+            ..Default::default()
+        };
+        let bundle = SendBundleRequest {
+            protocol_version: ProtocolVersion::V0_1,
+            inclusion_predicate: InclusionPredicate {
+                block: 1.into(),
+                max_block: None,
+            },
+            bundle_body,
+            validity_predicate: Some(validity_predicate),
+            privacy_predicate: Some(privacy_predicate),
+        };
+        let expected = serde_json::from_str::<Vec<SendBundleRequest>>(str).unwrap();
+        assert_eq!(bundle, expected[0]);
     }
 }
