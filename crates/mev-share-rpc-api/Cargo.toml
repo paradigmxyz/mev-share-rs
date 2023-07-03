@@ -17,6 +17,11 @@ ethers-core.workspace = true
 
 ## misc
 jsonrpsee = { version = "0.18", features = ["server", "macros"] }
+serde = { version = "1.0", features = ["derive"] }
+
+[dev-dependencies]
+serde_json.workspace = true
+
 
 [features]
 default = ["client"]

@@ -10,6 +10,10 @@
 /// `mev` namespace
 mod mev;
 
+/// type bindings 
+mod types;
+pub use types::*;
+
 /// re-export of all server traits
 #[cfg(feature = "server")]
 pub use servers::*;

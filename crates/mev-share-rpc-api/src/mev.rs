@@ -1,5 +1,6 @@
-use ethers_core::types::H256;
 use jsonrpsee::{core::RpcResult, proc_macros::rpc};
+
+use crate::{SendBundleRequest, SendBundleResponse};
 
 /// Mev rpc interface.
 #[cfg_attr(not(feature = "client"), rpc(server, namespace = "mev"))]
@@ -10,10 +11,10 @@ pub trait MevApi {
     /// Submitting bundles to the relay. It takes in a bundle and provides a bundle hash as a return
     /// value.
     #[method(name = "sendBundle")]
-    async fn send_bundle(&self) -> RpcResult<H256>;
+    async fn send_bundle(&self, request: SendBundleRequest) -> RpcResult<SendBundleResponse>;
 
     /// Similar to `mev_sendBundle` but instead of submitting a bundle to the relay, it returns a
     /// simulation result. Only fully matched bundles can be simulated.
     #[method(name = "simBundle")]
-    async fn sim_bundle(&self) -> RpcResult<()>;
+    async fn sim_bundle(&self, request: SendBundleRequest) -> RpcResult<()>;
 }
