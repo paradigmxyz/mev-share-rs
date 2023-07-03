@@ -15,11 +15,8 @@ pub struct SendBundleRequest {
     pub inclusion_predicate: InclusionPredicate,
     /// The transactions to include in the bundle.
     #[serde(rename = "body")]
-    pub bundle_body: BundleBody,
+    pub bundle_body: Vec<BundleItem>,
 }
-
-/// An array of transactions to be sent. 
-pub type BundleBody = Vec<BundleItem>;
 
 /// Data used by block builders to check if the bundle should be considered for inclusion.
 #[derive(Clone, Debug, Default, Serialize, Deserialize)]
@@ -78,7 +75,7 @@ impl SendBundleRequest {
         block_num: U64,
         max_block: Option<U64>,
         protocol_version: ProtocolVersion,
-        bundle_body: BundleBody,
+        bundle_body: Vec<BundleItem>,
     ) -> Self {
         Self {
             protocol_version,
