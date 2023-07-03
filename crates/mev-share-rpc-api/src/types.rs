@@ -1,6 +1,6 @@
 //! MEV-share bundle type bindings
 
-use ethers_core::types::{Bytes, U64, TxHash};
+use ethers_core::types::{Bytes, U64, TxHash, Address};
 use serde::{Deserialize, Serialize};
 
 /// A bundle of transactions to send to the matchmaker.
@@ -16,6 +16,12 @@ pub struct SendBundleRequest {
     /// The transactions to include in the bundle.
     #[serde(rename = "body")]
     pub bundle_body: Vec<BundleItem>,
+    /// Requirements for the bundle to be included in the block. 
+    #[serde(rename = "validity", skip_serializing_if = "Option::is_none")] 
+    pub validity_predicate: Option<ValidityPredicate>,
+    /// Preferences on what data should be shared about the bundle and its transactions
+    #[serde(rename = "privacy", skip_serializing_if = "Option::is_none")]
+    pub privacy_predicate: Option<PrivacyPredicate>,
 }
 
 /// Data used by block builders to check if the bundle should be considered for inclusion.
@@ -47,7 +53,78 @@ pub enum BundleItem {
         /// If true, the transaction can revert without the bundle being considered invalid.
         can_revert: bool,
     },
+    /// A bundle to backrun.
+    Bundle {
+        /// Params for the bundle.
+        bundle: SendBundleRequest,
+    },
 }
+
+/// Requirements for the bundle to be included in the block.
+#[derive(Clone, Debug, Default, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ValidityPredicate {
+    /// Specifies the minimum percent of a given bundle's earnings to redistribute 
+    /// for it to be included in a builder's block.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub refund: Option<Vec<Refund>>,
+    /// Specifies what addresses should receive what percent of the overall refund for this bundle, 
+    /// if it is enveloped by another bundle (eg. a searcher backrun).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub refund_config: Option<Vec<RefundConfig>>,
+}
+
+/// Specifies the minimum percent of a given bundle's earnings to redistribute
+/// for it to be included in a builder's block.
+#[derive(Clone, Debug, Default, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Refund {
+    /// The index of the transaction in the bundle.
+    pub body_idx: u64,
+    /// The minimum percent of the bundle's earnings to redistribute.
+    pub percent: u64,
+}
+
+/// Specifies what addresses should receive what percent of the overall refund for this bundle,
+/// if it is enveloped by another bundle (eg. a searcher backrun).
+#[derive(Clone, Debug, Default, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct RefundConfig {
+    /// The address to refund.
+    pub address: Address,
+    /// The minimum percent of the bundle's earnings to redistribute.
+    pub percent: u64,
+}
+
+/// Preferences on what data should be shared about the bundle and its transactions
+#[derive(Clone, Debug, Default, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PrivacyPredicate {
+    /// Hints on what data should be shared about the bundle and its transactions
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub hints: Option<Vec<PrivacyHint>>,
+    /// The addresses of the builders that should be allowed to see the bundle.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub builders: Option<Vec<Address>>,
+}
+
+/// Hints on what data should be shared about the bundle and its transactions
+#[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum PrivacyHint {
+    /// The calldata of the transaction.
+    Calldata,
+    /// The address of the contract the transaction is calling.
+    ContractAddress,
+    /// The logs emitted by the transaction.
+    Logs,
+    /// The 4-byte function selector of the transaction.
+    FunctionSelector,
+    /// The hash of the transaction.
+    Hash,
+}
+
+
 
 /// Response from the matchmaker after sending a bundle.
 #[derive(Deserialize, Debug, Serialize, Clone)]
@@ -84,6 +161,8 @@ impl SendBundleRequest {
                 max_block,
             },
             bundle_body,
+            validity_predicate: None,
+            privacy_predicate: None,
         }
     }
 }
@@ -93,7 +172,7 @@ mod tests {
     use crate::types::SendBundleRequest;
 
     #[test]
-    fn can_deserialize() {
+    fn can_deserialize_simple() {
         let str = r#"
         [{
             "version": "v0.1",
