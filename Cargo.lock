@@ -1302,6 +1302,8 @@ version = "0.1.0"
 dependencies = [
  "ethers-core",
  "jsonrpsee",
+ "serde",
+ "serde_json",
 ]
 
 [[package]]

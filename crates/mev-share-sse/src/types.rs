@@ -1,4 +1,4 @@
-//! MEV-share type bindings
+//! MEV-share event type bindings
 
 use ethers_core::{
     abi::Address,
