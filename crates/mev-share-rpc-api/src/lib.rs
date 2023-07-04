@@ -14,6 +14,10 @@ mod mev;
 mod types;
 pub use types::*;
 
+/// flashbots-style auth 
+mod auth;
+pub use auth::*;
+
 /// re-export of all server traits
 #[cfg(feature = "server")]
 pub use servers::*;
