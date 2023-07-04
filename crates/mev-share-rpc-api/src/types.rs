@@ -12,22 +12,22 @@ pub struct SendBundleRequest {
     pub protocol_version: ProtocolVersion,
     /// Data used by block builders to check if the bundle should be considered for inclusion.
     #[serde(rename = "inclusion")]
-    pub inclusion_predicate: InclusionPredicate,
+    pub inclusion: Inclusion,
     /// The transactions to include in the bundle.
     #[serde(rename = "body")]
     pub bundle_body: Vec<BundleItem>,
     /// Requirements for the bundle to be included in the block. 
     #[serde(rename = "validity", skip_serializing_if = "Option::is_none")] 
-    pub validity_predicate: Option<ValidityPredicate>,
+    pub validity: Option<Validity>,
     /// Preferences on what data should be shared about the bundle and its transactions
     #[serde(rename = "privacy", skip_serializing_if = "Option::is_none")]
-    pub privacy_predicate: Option<PrivacyPredicate>,
+    pub privacy: Option<Privacy>,
 }
 
 /// Data used by block builders to check if the bundle should be considered for inclusion.
 #[derive(Clone, Debug, Default, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
-pub struct InclusionPredicate {
+pub struct Inclusion {
     /// The first block the bundle is valid for.
     pub block: U64,
     /// The last block the bundle is valid for.
@@ -58,7 +58,7 @@ pub enum BundleItem {
 /// Requirements for the bundle to be included in the block.
 #[derive(Clone, Debug, Default, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
-pub struct ValidityPredicate {
+pub struct Validity {
     /// Specifies the minimum percent of a given bundle's earnings to redistribute 
     /// for it to be included in a builder's block.
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -94,7 +94,7 @@ pub struct RefundConfig {
 /// Preferences on what data should be shared about the bundle and its transactions
 #[derive(Clone, Debug, Default, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
-pub struct PrivacyPredicate {
+pub struct Privacy {
     /// Hints on what data should be shared about the bundle and its transactions
     #[serde(skip_serializing_if = "Option::is_none")]
     pub hints: Option<Vec<PrivacyHint>>,
@@ -151,13 +151,13 @@ impl SendBundleRequest {
     ) -> Self {
         Self {
             protocol_version,
-            inclusion_predicate: InclusionPredicate {
+            inclusion: Inclusion {
                 block: block_num,
                 max_block,
             },
             bundle_body,
-            validity_predicate: None,
-            privacy_predicate: None,
+            validity: None,
+            privacy: None,
         }
     }
 }
@@ -168,7 +168,7 @@ mod tests {
 
     use ethers_core::types::Bytes;
 
-    use crate::{types::SendBundleRequest, types::ProtocolVersion, InclusionPredicate, BundleItem, ValidityPredicate, RefundConfig, PrivacyPredicate, PrivacyHint};
+    use crate::{types::SendBundleRequest, types::ProtocolVersion, Inclusion, BundleItem, Validity, RefundConfig, Privacy, PrivacyHint};
 
     #[test]
     fn can_deserialize_simple() {
@@ -251,26 +251,26 @@ mod tests {
             can_revert: false,
         }];
 
-        let validity_predicate = ValidityPredicate {
+        let validity = Some(Validity {
             refund_config: Some(vec![RefundConfig {
                 address: "0x8EC1237b1E80A6adf191F40D4b7D095E21cdb18f".parse().unwrap(),
                 percent: 100,
             }]),
             ..Default::default()
-        };
-        let privacy_predicate = PrivacyPredicate {
+        });
+        let privacy = Some(Privacy {
             hints: Some(vec![PrivacyHint::Calldata]),
             ..Default::default()
-        };
+        });
         let bundle = SendBundleRequest {
             protocol_version: ProtocolVersion::V0_1,
-            inclusion_predicate: InclusionPredicate {
+            inclusion: Inclusion {
                 block: 1.into(),
                 max_block: None,
             },
             bundle_body,
-            validity_predicate: Some(validity_predicate),
-            privacy_predicate: Some(privacy_predicate),
+            validity,
+            privacy,
         };
         let expected = serde_json::from_str::<Vec<SendBundleRequest>>(str).unwrap();
         assert_eq!(bundle, expected[0]);
