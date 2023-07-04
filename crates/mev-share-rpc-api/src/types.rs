@@ -40,8 +40,8 @@ pub struct InclusionPredicate {
 #[serde(untagged)]
 #[serde(rename_all = "camelCase")]
 pub enum BundleItem {
-    /// The hash of the transaction we are trying to backrun.
-    TxHash {
+    /// The hash of either a transaction or bundle we are trying to backrun.
+    Hash {
         /// Tx hash.
         hash: TxHash,
     },
@@ -53,14 +53,6 @@ pub enum BundleItem {
         /// If true, the transaction can revert without the bundle being considered invalid.
         can_revert: bool,
     },
-    /// A bundle to backrun.
-    Bundle {
-        /// Params for the bundle.
-        bundle: SendBundleRequest,
-    },
-    /// By specifying an empty object in the body array, searchers can specify if, and where, 
-    /// other transactions may be included with relation to their bundle.
-    AllowBackrun { }
 }
 
 /// Requirements for the bundle to be included in the block.
