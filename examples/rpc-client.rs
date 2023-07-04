@@ -51,9 +51,8 @@ async fn main() {
     });
 
     let bundle = SendBundleRequest {
-        protocol_version: Default::default(),
-        inclusion_predicate: Default::default(),
-        bundle_body,
+        bundle_body, 
+        ..Default::default()
     };
 
     // Send bundle
