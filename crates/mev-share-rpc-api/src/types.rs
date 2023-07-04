@@ -409,4 +409,34 @@ mod tests {
         let expected = serde_json::from_str::<Vec<SendBundleRequest>>(str).unwrap();
         assert_eq!(bundle, expected[0]);
     }
+
+    #[test]
+    fn can_serialize_privacy_hint() {
+        let hint = PrivacyHint {
+            calldata: true,
+            contract_address: true,
+            logs: true,
+            function_selector: true,
+            hash: true,
+            tx_hash: true,
+        };
+        let expected = r#"["calldata","contract_address","logs","function_selector","hash","tx_hash"]"#;
+        let actual = serde_json::to_string(&hint).unwrap();
+        assert_eq!(actual, expected);
+    }
+
+    #[test]
+    fn can_deserialize_privacy_hint() {
+        let hint = PrivacyHint {
+            calldata: true,
+            contract_address: false,
+            logs: true,
+            function_selector: false,
+            hash: true,
+            tx_hash: false,
+        };
+        let expected = r#"["calldata","logs","hash"]"#;
+        let actual: PrivacyHint = serde_json::from_str(expected).unwrap();
+        assert_eq!(actual, hint);
+    }
 }
