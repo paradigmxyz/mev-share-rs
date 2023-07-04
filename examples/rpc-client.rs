@@ -44,7 +44,7 @@ async fn main() {
 
     // Build bundle
     let mut bundle_body = Vec::new();
-    bundle_body.push(BundleItem::TxHash { hash: tx_hash });
+    bundle_body.push(BundleItem::Hash { hash: tx_hash });
     bundle_body.push(BundleItem::Tx {
         tx: bytes,
         can_revert: false,
