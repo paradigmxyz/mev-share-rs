@@ -4,7 +4,7 @@
 
 use std::{
     sync::Arc,
-    task::{Context, Poll},
+    task::{Context, Poll}, error::Error,
 };
 
 use ethers_core::{types::H256, utils::keccak256};
@@ -52,14 +52,15 @@ impl<S, I> Service<Request<Body>> for FlashbotsSigner<S, I>
 where
     I: Service<Request<Body>> + Clone + Send + 'static,
     I::Future: Send,
+    I::Error: Into<Box<dyn Error + Send + Sync>> + 'static,
     S: Signer + Clone + Send + 'static,
 {
     type Response = I::Response;
-    type Error = I::Error;
+    type Error = Box<dyn Error + Send + Sync>;
     type Future = BoxFuture<'static, Result<Self::Response, Self::Error>>;
 
     fn poll_ready(&mut self, cx: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
-        self.inner.poll_ready(cx)
+        self.inner.poll_ready(cx).map_err(Into::into)
     }
 
     fn call(&mut self, request: Request<Body>) -> Self::Future {
@@ -71,13 +72,12 @@ where
         let (mut parts, body) = request.into_parts();
 
         Box::pin(async move {
-            let body_bytes = hyper::body::to_bytes(body).await.unwrap();
+            let body_bytes = hyper::body::to_bytes(body).await?;
 
             // sign request body and insert header
             let signature = signer
                 .sign_message(format!("0x{:x}", H256::from(keccak256(body_bytes.clone()))))
-                .await
-                .unwrap();
+                .await?;
 
             let header_name = HeaderName::from_static("x-flashbots-signature");
             let header_val =
@@ -85,8 +85,7 @@ where
             parts.headers.insert(header_name, header_val);
 
             let request = Request::from_parts(parts, Body::from(body_bytes.clone()));
-
-            inner.call(request).await
+            inner.call(request).await.map_err(Into::into)
         })
     }
 }
