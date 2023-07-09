@@ -39,7 +39,7 @@ impl<S: Clone, I> Layer<I> for FlashbotsSignerLayer<S> {
     }
 }
 
-/// Middleware that adds a request header with a signed payload.
+/// Middleware that signs the request body and adds the signature to the x-flashbots-signature header.
 /// For more info, see https://docs.flashbots.net/flashbots-auction/searchers/advanced/rpc-endpoint#authentication
 #[derive(Clone)]
 pub struct FlashbotsSigner<S, I> {
@@ -97,7 +97,7 @@ where
                 .await?;
 
             let header_val =
-                HeaderValue::from_str(&format!("{:?}:0x{}", signer.address(), signature)).unwrap();
+                HeaderValue::from_str(&format!("{:?}:0x{}", signer.address(), signature)).expect("Header contains invalid characters");
             parts.headers.insert(FLASHBOTS_HEADER, header_val);
 
             let request = Request::from_parts(parts, Body::from(body_bytes.clone()));

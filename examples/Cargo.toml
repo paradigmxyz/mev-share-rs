@@ -16,7 +16,7 @@ tower = "0.4.13"
 
 ## eth 
 ethers-core.workspace = true
-ethers-signers = "2.0.7"
+ethers-signers.workspace = true
 tracing-subscriber = { version = "0.3", default-features = false, features = ["env-filter", "fmt"] }
 
 
