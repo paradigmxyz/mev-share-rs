@@ -3,8 +3,8 @@
 //! to the request headers.
 
 use std::{
-    sync::Arc,
-    task::{Context, Poll}, error::Error,
+    error::Error,
+    task::{Context, Poll},
 };
 
 use ethers_core::{types::H256, utils::keccak256};
@@ -19,12 +19,12 @@ use tower::{Layer, Service};
 /// Layer that applies [`FlashbotsSigner`] which adds a request header with a signed payload.
 #[derive(Clone)]
 pub struct FlashbotsSignerLayer<S> {
-    signer: Arc<S>,
+    signer: S,
 }
 
 impl<S> FlashbotsSignerLayer<S> {
     /// Creates a new [`FlashbotsSignerLayer`] with the given signer.
-    pub fn new(signer: Arc<S>) -> Self {
+    pub fn new(signer: S) -> Self {
         FlashbotsSignerLayer { signer }
     }
 }
@@ -33,10 +33,7 @@ impl<S: Clone, I> Layer<I> for FlashbotsSignerLayer<S> {
     type Service = FlashbotsSigner<S, I>;
 
     fn layer(&self, inner: I) -> Self::Service {
-        FlashbotsSigner {
-            signer: self.signer.clone(),
-            inner,
-        }
+        FlashbotsSigner { signer: self.signer.clone(), inner }
     }
 }
 
@@ -44,7 +41,7 @@ impl<S: Clone, I> Layer<I> for FlashbotsSignerLayer<S> {
 /// For more info, see https://docs.flashbots.net/flashbots-auction/searchers/advanced/rpc-endpoint#authentication
 #[derive(Clone)]
 pub struct FlashbotsSigner<S, I> {
-    signer: Arc<S>,
+    signer: S,
     inner: I,
 }
 
@@ -71,6 +68,21 @@ where
 
         let (mut parts, body) = request.into_parts();
 
+        // if method is not POST, or content-type is not json, just pass through the request
+        if parts.method != http::Method::POST ||
+            parts
+                .headers
+                .get(http::header::CONTENT_TYPE)
+                .map(|v| v != HeaderValue::from_static("application/json"))
+                .unwrap_or(true)
+        {
+            return Box::pin(async move {
+                let request = Request::from_parts(parts, body);
+                inner.call(request).await.map_err(Into::into)
+            })
+        }
+
+        // otherwise, sign the request body and add the signature to the header
         Box::pin(async move {
             let body_bytes = hyper::body::to_bytes(body).await?;
 
@@ -102,7 +114,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_signature() {
-        let fb_signer =  Arc::new(LocalWallet::new(&mut thread_rng()));
+        let fb_signer = LocalWallet::new(&mut thread_rng());
 
         // mock service that returns the request headers
         let svc = FlashbotsSigner {
@@ -122,10 +134,7 @@ mod tests {
         // generate set of bytes for the payload
         let bytes = vec![1u8; 32];
 
-        let res = svc
-            .oneshot(Request::new(Body::from(bytes.clone())))
-            .await
-            .unwrap();
+        let res = svc.oneshot(Request::new(Body::from(bytes.clone()))).await.unwrap();
 
         let header = res.headers().get("x-flashbots-signature").unwrap();
         let header = header.to_str().unwrap();

@@ -10,11 +10,11 @@
 /// `mev` namespace
 mod mev;
 
-/// type bindings 
+/// type bindings
 mod types;
 pub use types::*;
 
-/// flashbots-style auth 
+/// flashbots-style auth
 mod auth;
 pub use auth::*;
 
