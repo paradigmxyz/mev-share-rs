@@ -2,8 +2,7 @@
 
 use std::sync::Arc;
 
-use jsonrpsee::http_client::HttpClientBuilder;
-use jsonrpsee::http_client::transport::Error as HttpError;
+use jsonrpsee::http_client::{transport::Error as HttpError, HttpClientBuilder};
 use mev_share_rpc_api::{BundleItem, FlashbotsSignerLayer, MevApiClient, SendBundleRequest};
 use tower::{ServiceBuilder, ServiceExt};
 use tracing_subscriber::{fmt, prelude::*, EnvFilter};

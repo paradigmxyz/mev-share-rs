@@ -68,14 +68,17 @@ where
 
         let (mut parts, body) = request.into_parts();
 
-        // if method is not POST, or content-type is not json, just pass through the request
-        if parts.method != http::Method::POST ||
-            parts
-                .headers
-                .get(http::header::CONTENT_TYPE)
-                .map(|v| v != HeaderValue::from_static("application/json"))
-                .unwrap_or(true)
-        {
+        // if method is not POST, content-type is not json, or signature already exists, just pass
+        // through the request
+        let is_post = parts.method == http::Method::POST;
+        let is_json = parts
+            .headers
+            .get(http::header::CONTENT_TYPE)
+            .map(|v| v == HeaderValue::from_static("application/json"))
+            .unwrap_or(false);
+        let has_sig = parts.headers.contains_key(HeaderName::from_static("x-flashbots-signature"));
+
+        if !is_post || !is_json || has_sig {
             return Box::pin(async move {
                 let request = Request::from_parts(parts, body);
                 inner.call(request).await.map_err(Into::into)
@@ -131,10 +134,15 @@ mod tests {
             }),
         };
 
-        // generate set of bytes for the payload
+        // build request
         let bytes = vec![1u8; 32];
+        let req = Request::builder()
+            .method(http::Method::POST)
+            .header(http::header::CONTENT_TYPE, "application/json")
+            .body(Body::from(bytes.clone()))
+            .unwrap();
 
-        let res = svc.oneshot(Request::new(Body::from(bytes.clone()))).await.unwrap();
+        let res = svc.oneshot(req).await.unwrap();
 
         let header = res.headers().get("x-flashbots-signature").unwrap();
         let header = header.to_str().unwrap();
@@ -152,5 +160,39 @@ mod tests {
         // verify that the header contains expected address and signature
         assert_eq!(header_address, signer_address);
         assert_eq!(header_signature, expected_signature);
+    }
+
+    #[tokio::test]
+    async fn test_skips_non_json() {
+        let fb_signer = LocalWallet::new(&mut thread_rng());
+
+        // mock service that returns the request headers
+        let svc = FlashbotsSigner {
+            signer: fb_signer.clone(),
+            inner: service_fn(|_req: Request<Body>| async {
+                let (parts, _) = _req.into_parts();
+
+                let mut res = Response::builder();
+                for (k, v) in parts.headers.iter() {
+                    res = res.header(k, v);
+                }
+                let res = res.body(Body::empty()).unwrap();
+                Ok::<_, Infallible>(res)
+            }),
+        };
+
+        // build plain text request
+        let bytes = vec![1u8; 32];
+        let req = Request::builder()
+            .method(http::Method::POST)
+            .header(http::header::CONTENT_TYPE, "text/plain")
+            .body(Body::from(bytes.clone()))
+            .unwrap();
+
+        let res = svc.oneshot(req).await.unwrap();
+
+        // response should not contain a signature header
+        let header = res.headers().get("x-flashbots-signature");
+        assert!(header.is_none());
     }
 }
