@@ -12,7 +12,8 @@ pub trait EthBundleApi {
     #[method(name = "sendBundle")]
     async fn send_bundle(&self, request: ()) -> RpcResult<()>;
 
-    /// `eth_callBundle` can be used to simulate a bundle against a specific block number, including simulating a bundle at the top of the next block.
+    /// `eth_callBundle` can be used to simulate a bundle against a specific block number, including
+    /// simulating a bundle at the top of the next block.
     #[method(name = "callBundle")]
     async fn call_bundle(&self, request: ()) -> RpcResult<()>;
 
@@ -24,9 +25,11 @@ pub trait EthBundleApi {
     #[method(name = "sendPrivateTransaction")]
     async fn send_private_transaction(&self, request: ()) -> RpcResult<()>;
 
-    /// The `eth_cancelPrivateTransaction` method stops private transactions from being submitted for future blocks.
+    /// The `eth_cancelPrivateTransaction` method stops private transactions from being submitted
+    /// for future blocks.
     ///
-    /// A transaction can only be cancelled if the request is signed by the same key as the eth_sendPrivateTransaction call submitting the transaction in first place.
+    /// A transaction can only be cancelled if the request is signed by the same key as the
+    /// eth_sendPrivateTransaction call submitting the transaction in first place.
     #[method(name = "cancelPrivateTransaction")]
     async fn cancel_private_transaction(&self, request: ()) -> RpcResult<()>;
 }

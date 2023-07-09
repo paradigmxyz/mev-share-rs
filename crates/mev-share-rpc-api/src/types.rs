@@ -1,9 +1,10 @@
 //! MEV-share bundle type bindings
 
-use ethers_core::types::{Bytes, U64, TxHash, Address};
-use serde::{Deserialize, Serialize, Deserializer};
-use serde::ser::{Serializer, SerializeSeq};
-
+use ethers_core::types::{Address, Bytes, TxHash, U64};
+use serde::{
+    ser::{SerializeSeq, Serializer},
+    Deserialize, Deserializer, Serialize,
+};
 
 /// A bundle of transactions to send to the matchmaker.
 #[derive(Clone, Debug, Default, Serialize, Deserialize, PartialEq)]
@@ -18,8 +19,8 @@ pub struct SendBundleRequest {
     /// The transactions to include in the bundle.
     #[serde(rename = "body")]
     pub bundle_body: Vec<BundleItem>,
-    /// Requirements for the bundle to be included in the block. 
-    #[serde(rename = "validity", skip_serializing_if = "Option::is_none")] 
+    /// Requirements for the bundle to be included in the block.
+    #[serde(rename = "validity", skip_serializing_if = "Option::is_none")]
     pub validity: Option<Validity>,
     /// Preferences on what data should be shared about the bundle and its transactions
     #[serde(rename = "privacy", skip_serializing_if = "Option::is_none")]
@@ -61,11 +62,11 @@ pub enum BundleItem {
 #[derive(Clone, Debug, Default, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct Validity {
-    /// Specifies the minimum percent of a given bundle's earnings to redistribute 
+    /// Specifies the minimum percent of a given bundle's earnings to redistribute
     /// for it to be included in a builder's block.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub refund: Option<Vec<Refund>>,
-    /// Specifies what addresses should receive what percent of the overall refund for this bundle, 
+    /// Specifies what addresses should receive what percent of the overall refund for this bundle,
     /// if it is enveloped by another bundle (eg. a searcher backrun).
     #[serde(skip_serializing_if = "Option::is_none")]
     pub refund_config: Option<Vec<RefundConfig>>,
@@ -106,8 +107,7 @@ pub struct Privacy {
 }
 
 /// Hints on what data should be shared about the bundle and its transactions
-#[derive(Clone, Debug, PartialEq)]
-#[derive(Default)]
+#[derive(Clone, Debug, PartialEq, Default)]
 pub struct PrivacyHint {
     /// The calldata of the bundle's transactions should be shared.
     pub calldata: bool,
@@ -123,11 +123,8 @@ pub struct PrivacyHint {
     pub tx_hash: bool,
 }
 
-
-
 #[allow(missing_docs)]
 impl PrivacyHint {
-
     pub fn with_calldata(mut self) -> Self {
         self.calldata = true;
         self
@@ -280,10 +277,7 @@ impl SendBundleRequest {
     ) -> Self {
         Self {
             protocol_version,
-            inclusion: Inclusion {
-                block: block_num,
-                max_block,
-            },
+            inclusion: Inclusion { block: block_num, max_block },
             bundle_body,
             validity: None,
             privacy: None,
@@ -297,7 +291,10 @@ mod tests {
 
     use ethers_core::types::Bytes;
 
-    use crate::{types::SendBundleRequest, types::ProtocolVersion, Inclusion, BundleItem, Validity, RefundConfig, Privacy, PrivacyHint};
+    use crate::{
+        types::{ProtocolVersion, SendBundleRequest},
+        BundleItem, Inclusion, Privacy, PrivacyHint, RefundConfig, Validity,
+    };
 
     #[test]
     fn can_deserialize_simple() {
@@ -389,19 +386,13 @@ mod tests {
         });
 
         let privacy = Some(Privacy {
-            hints: Some(PrivacyHint {
-                calldata: true,
-                ..Default::default()
-            }),
+            hints: Some(PrivacyHint { calldata: true, ..Default::default() }),
             ..Default::default()
         });
-       
+
         let bundle = SendBundleRequest {
             protocol_version: ProtocolVersion::V0_1,
-            inclusion: Inclusion {
-                block: 1.into(),
-                max_block: None,
-            },
+            inclusion: Inclusion { block: 1.into(), max_block: None },
             bundle_body,
             validity,
             privacy,
@@ -420,7 +411,8 @@ mod tests {
             hash: true,
             tx_hash: true,
         };
-        let expected = r#"["calldata","contract_address","logs","function_selector","hash","tx_hash"]"#;
+        let expected =
+            r#"["calldata","contract_address","logs","function_selector","hash","tx_hash"]"#;
         let actual = serde_json::to_string(&hint).unwrap();
         assert_eq!(actual, expected);
     }

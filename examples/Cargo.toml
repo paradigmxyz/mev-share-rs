@@ -12,7 +12,11 @@ mev-share-rpc-api = { path = "../crates/mev-share-rpc-api", features = ["client"
 tokio = { version = "1", features = ["macros", "rt", "rt-multi-thread"] }
 futures-util = { version = "0.3" }
 jsonrpsee = { version = "0.18", features = ["client", "async-client"] }
+tower = "0.4.13"
 
+## eth 
+ethers-core.workspace = true
+ethers-signers.workspace = true
 tracing-subscriber = { version = "0.3", default-features = false, features = ["env-filter", "fmt"] }
 
 
