@@ -39,8 +39,8 @@ impl<S: Clone, I> Layer<I> for FlashbotsSignerLayer<S> {
     }
 }
 
-/// Middleware that signs the request body and adds the signature to the x-flashbots-signature header.
-/// For more info, see <https://docs.flashbots.net/flashbots-auction/searchers/advanced/rpc-endpoint#authentication>
+/// Middleware that signs the request body and adds the signature to the x-flashbots-signature
+/// header. For more info, see <https://docs.flashbots.net/flashbots-auction/searchers/advanced/rpc-endpoint#authentication>
 #[derive(Clone)]
 pub struct FlashbotsSigner<S, I> {
     signer: S,
@@ -70,11 +70,11 @@ where
 
         let (mut parts, body) = request.into_parts();
 
-        // if method is not POST, return an error. 
+        // if method is not POST, return an error.
         if parts.method != http::Method::POST {
-           return Box::pin(async move {
+            return Box::pin(async move {
                 Err(format!("Invalid method: {}", parts.method.as_str()).into())
-            }) 
+            })
         }
 
         // if content-type is not json, or signature already exists, just pass through the request
@@ -102,7 +102,8 @@ where
                 .await?;
 
             let header_val =
-                HeaderValue::from_str(&format!("{:?}:0x{}", signer.address(), signature)).expect("Header contains invalid characters");
+                HeaderValue::from_str(&format!("{:?}:0x{}", signer.address(), signature))
+                    .expect("Header contains invalid characters");
             parts.headers.insert(FLASHBOTS_HEADER, header_val);
 
             let request = Request::from_parts(parts, Body::from(body_bytes.clone()));

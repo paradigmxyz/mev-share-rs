@@ -13,7 +13,7 @@ mod mev;
 /// `eth` namespace extension for bundles
 mod eth;
 
-/// type bindings 
+/// type bindings
 mod types;
 pub use types::*;
 
@@ -28,8 +28,7 @@ pub use servers::*;
 #[cfg(feature = "server")]
 #[doc(hidden)]
 pub mod servers {
-    pub use crate::mev::MevApiServer;
-    pub use crate::eth::EthBundleApiServer;
+    pub use crate::{eth::EthBundleApiServer, mev::MevApiServer};
 }
 
 /// re-export of all client traits
@@ -40,7 +39,5 @@ pub use clients::*;
 #[cfg(feature = "client")]
 #[doc(hidden)]
 pub mod clients {
-    pub use crate::mev::MevApiClient;
-    pub use crate::eth::EthBundleApiClient;
-    pub use crate::auth::FlashbotsSignerLayer;
+    pub use crate::{auth::FlashbotsSignerLayer, eth::EthBundleApiClient, mev::MevApiClient};
 }
