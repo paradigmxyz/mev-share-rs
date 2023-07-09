@@ -19,7 +19,6 @@ pub use types::*;
 
 /// flashbots-style auth
 mod auth;
-pub use auth::*;
 
 /// re-export of all server traits
 #[cfg(feature = "server")]
@@ -43,4 +42,5 @@ pub use clients::*;
 pub mod clients {
     pub use crate::mev::MevApiClient;
     pub use crate::eth::EthBundleApiClient;
+    pub use crate::auth::FlashbotsSignerLayer;
 }
