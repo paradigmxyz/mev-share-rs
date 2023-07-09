@@ -5,7 +5,7 @@ use std::sync::Arc;
 use jsonrpsee::http_client::HttpClientBuilder;
 use jsonrpsee::http_client::transport::Error as HttpError;
 use mev_share_rpc_api::{BundleItem, FlashbotsSignerLayer, MevApiClient, SendBundleRequest};
-use tower::ServiceBuilder;
+use tower::{ServiceBuilder, ServiceExt};
 use tracing_subscriber::{fmt, prelude::*, EnvFilter};
 
 use ethers_core::{
@@ -26,10 +26,10 @@ async fn main() {
 
     // Set up flashbots-style auth middleware
     let signing_middleware = FlashbotsSignerLayer::new(fb_signer);
-    let service_builder = ServiceBuilder::new().layer(signing_middleware);
-
-    // Why does this not work? I should be able to map the error type from the auth middleware to the type expected by the http client builder
-    let service_builder = service_builder.map_err(|e| HttpError::Malformed);
+    let service_builder = ServiceBuilder::new()
+        // map signer errors to http errors
+        .map_err(|e| HttpError::Http(e))
+        .layer(signing_middleware);
 
     // Set up the rpc client
     let url = "https://relay.flashbots.net:443";
