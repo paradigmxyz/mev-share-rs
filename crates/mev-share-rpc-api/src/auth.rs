@@ -40,7 +40,7 @@ impl<S: Clone, I> Layer<I> for FlashbotsSignerLayer<S> {
 }
 
 /// Middleware that signs the request body and adds the signature to the x-flashbots-signature header.
-/// For more info, see https://docs.flashbots.net/flashbots-auction/searchers/advanced/rpc-endpoint#authentication
+/// For more info, see <https://docs.flashbots.net/flashbots-auction/searchers/advanced/rpc-endpoint#authentication>
 #[derive(Clone)]
 pub struct FlashbotsSigner<S, I> {
     signer: S,
