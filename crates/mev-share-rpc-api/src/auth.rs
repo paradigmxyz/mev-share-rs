@@ -93,7 +93,7 @@ where
 
             // sign request body and insert header
             let signature = signer
-                .sign_message(format!("0x{:x}", H256::from(keccak256(body_bytes.clone()))))
+                .sign_message(format!("0x{:x}", H256::from(keccak256(body_bytes.as_ref()))))
                 .await?;
 
             let header_val =
