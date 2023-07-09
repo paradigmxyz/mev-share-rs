@@ -70,9 +70,14 @@ where
 
         let (mut parts, body) = request.into_parts();
 
-        // if method is not POST, content-type is not json, or signature already exists, just pass
-        // through the request
-        let is_post = parts.method == http::Method::POST;
+        // if method is not POST, return an error. 
+        if parts.method != http::Method::POST {
+           return Box::pin(async move {
+                Err(format!("Invalid method: {}", parts.method.as_str()).into())
+            }) 
+        }
+
+        // if content-type is not json, or signature already exists, just pass through the request
         let is_json = parts
             .headers
             .get(http::header::CONTENT_TYPE)
@@ -80,7 +85,7 @@ where
             .unwrap_or(false);
         let has_sig = parts.headers.contains_key(FLASHBOTS_HEADER);
 
-        if !is_post || !is_json || has_sig {
+        if !is_json || has_sig {
             return Box::pin(async move {
                 let request = Request::from_parts(parts, body);
                 inner.call(request).await.map_err(Into::into)
@@ -195,5 +200,38 @@ mod tests {
         // response should not contain a signature header
         let header = res.headers().get("x-flashbots-signature");
         assert!(header.is_none());
+    }
+
+    #[tokio::test]
+    async fn test_returns_error_when_not_post() {
+        let fb_signer = LocalWallet::new(&mut thread_rng());
+
+        // mock service that returns the request headers
+        let svc = FlashbotsSigner {
+            signer: fb_signer.clone(),
+            inner: service_fn(|_req: Request<Body>| async {
+                let (parts, _) = _req.into_parts();
+
+                let mut res = Response::builder();
+                for (k, v) in parts.headers.iter() {
+                    res = res.header(k, v);
+                }
+                let res = res.body(Body::empty()).unwrap();
+                Ok::<_, Infallible>(res)
+            }),
+        };
+
+        // build plain text request
+        let bytes = vec![1u8; 32];
+        let req = Request::builder()
+            .method(http::Method::GET)
+            .header(http::header::CONTENT_TYPE, "application/json")
+            .body(Body::from(bytes.clone()))
+            .unwrap();
+
+        let res = svc.oneshot(req).await;
+
+        // should be an error
+        assert!(res.is_err());
     }
 }
