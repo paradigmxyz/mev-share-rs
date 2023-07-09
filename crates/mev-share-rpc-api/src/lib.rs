@@ -10,7 +10,10 @@
 /// `mev` namespace
 mod mev;
 
-/// type bindings
+/// `eth` namespace extension for bundles
+mod eth;
+
+/// type bindings 
 mod types;
 pub use types::*;
 
@@ -27,6 +30,7 @@ pub use servers::*;
 #[doc(hidden)]
 pub mod servers {
     pub use crate::mev::MevApiServer;
+    pub use crate::eth::EthBundleApiServer;
 }
 
 /// re-export of all client traits
@@ -38,4 +42,5 @@ pub use clients::*;
 #[doc(hidden)]
 pub mod clients {
     pub use crate::mev::MevApiClient;
+    pub use crate::eth::EthBundleApiClient;
 }
