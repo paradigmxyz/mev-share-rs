@@ -1,6 +1,6 @@
 use jsonrpsee::{core::RpcResult, proc_macros::rpc};
 
-use crate::{SendBundleRequest, SendBundleResponse};
+use crate::{SendBundleRequest, SendBundleResponse, SimBundleOptions, SimBundleResponse};
 
 /// Mev rpc interface.
 #[cfg_attr(not(feature = "client"), rpc(server, namespace = "mev"))]
@@ -16,5 +16,5 @@ pub trait MevApi {
     /// Similar to `mev_sendBundle` but instead of submitting a bundle to the relay, it returns a
     /// simulation result. Only fully matched bundles can be simulated.
     #[method(name = "simBundle")]
-    async fn sim_bundle(&self, request: SendBundleRequest) -> RpcResult<()>;
+    async fn sim_bundle(&self, bundle: SendBundleRequest, sim_options: SimBundleOptions) -> RpcResult<SimBundleResponse>;
 }
