@@ -20,6 +20,8 @@ futures-util = { workspace = true, features = ["io"] }
 http-types = { version = "2.12", default-features = false }
 hyper = { workspace = true, features = ["stream"] }
 tower.workspace = true
+tokio-util = { version = "0.7", features = ["compat"] }
+
 
 ## misc
 bytes = "1.4"
