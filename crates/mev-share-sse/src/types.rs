@@ -26,12 +26,15 @@ pub struct Event {
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct EventTransaction {
     /// Transaction recipient address.
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub to: Option<Address>,
     /// 4-byte-function selector
     #[serde(rename = "functionSelector")]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub function_selector: Option<FunctionSelector>,
     /// Calldata of the transaction
     #[serde(rename = "callData")]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub calldata: Option<Bytes>,
 }
 
