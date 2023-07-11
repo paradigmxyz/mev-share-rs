@@ -26,13 +26,13 @@ pub struct Event {
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct EventTransaction {
     /// Transaction recipient address.
-    pub to: Address,
+    pub to: Option<Address>,
     /// 4-byte-function selector
     #[serde(rename = "functionSelector")]
-    pub function_selector: FunctionSelector,
+    pub function_selector: Option<FunctionSelector>,
     /// Calldata of the transaction
     #[serde(rename = "callData")]
-    pub calldata: Bytes,
+    pub calldata: Option<Bytes>,
 }
 
 /// A log produced by a transaction.
@@ -184,7 +184,7 @@ impl<'de> Deserialize<'de> for FunctionSelector {
             return Err(serde::de::Error::custom(format!(
                 "Expected 4 byte function selector: {}",
                 hex_str
-            )))
+            )));
         }
 
         let bytes = hex::decode(s).map_err(serde::de::Error::custom)?;
