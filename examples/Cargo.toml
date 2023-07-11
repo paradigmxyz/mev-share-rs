@@ -26,6 +26,3 @@ path = "sse.rs"
 [[example]]
 name = "rpc-client"
 path = "rpc-client.rs"
-[[example]]
-name = "joint"
-path = "joint.rs"

@@ -54,7 +54,7 @@ async fn main() {
     let resp = client.send_bundle(bundle.clone()).await;
     println!("Got a bundle response: {:?}", resp);
 
-    // Simulate bundle 
+    // Simulate bundle
     let sim_res = client.sim_bundle(bundle, Default::default()).await;
     println!("Got a simulation response: {:?}", sim_res);
 }
