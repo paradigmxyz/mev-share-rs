@@ -16,5 +16,9 @@ pub trait MevApi {
     /// Similar to `mev_sendBundle` but instead of submitting a bundle to the relay, it returns a
     /// simulation result. Only fully matched bundles can be simulated.
     #[method(name = "simBundle")]
-    async fn sim_bundle(&self, bundle: SendBundleRequest, sim_overrides: SimBundleOverrides) -> RpcResult<SimBundleResponse>;
+    async fn sim_bundle(
+        &self,
+        bundle: SendBundleRequest,
+        sim_overrides: SimBundleOverrides,
+    ) -> RpcResult<SimBundleResponse>;
 }

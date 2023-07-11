@@ -1,6 +1,6 @@
 //! MEV-share bundle type bindings
 
-use ethers_core::types::{Address, Bytes, TxHash, U64, BlockId, Log};
+use ethers_core::types::{Address, BlockId, Bytes, Log, TxHash, U64};
 use serde::{
     ser::{SerializeSeq, Serializer},
     Deserialize, Deserializer, Serialize,
@@ -270,7 +270,7 @@ pub enum ProtocolVersion {
 /// Optional fields to override simulation state.
 #[derive(Deserialize, Debug, Serialize, Clone, Default, PartialEq)]
 #[serde(rename_all = "camelCase")]
-pub struct SimBundleOverrides { 
+pub struct SimBundleOverrides {
     /// Block used for simulation state. Defaults to latest block.
     /// Block header data will be derived from parent block by default.
     /// Specify other params to override the default values.
@@ -358,7 +358,7 @@ mod tests {
 
     use crate::{
         types::{ProtocolVersion, SendBundleRequest},
-        BundleItem, Inclusion, Privacy, PrivacyHint, RefundConfig, Validity, SimBundleResponse,
+        BundleItem, Inclusion, Privacy, PrivacyHint, RefundConfig, SimBundleResponse, Validity,
     };
 
     #[test]
