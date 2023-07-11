@@ -270,7 +270,7 @@ pub enum ProtocolVersion {
 /// Optional fields to override simulation state.
 #[derive(Deserialize, Debug, Serialize, Clone, Default, PartialEq)]
 #[serde(rename_all = "camelCase")]
-pub struct SimBundleOptions { 
+pub struct SimBundleOverrides { 
     /// Block used for simulation state. Defaults to latest block.
     /// Block header data will be derived from parent block by default.
     /// Specify other params to override the default values.
@@ -358,7 +358,7 @@ mod tests {
 
     use crate::{
         types::{ProtocolVersion, SendBundleRequest},
-        BundleItem, Inclusion, Privacy, PrivacyHint, RefundConfig, Validity,
+        BundleItem, Inclusion, Privacy, PrivacyHint, RefundConfig, Validity, SimBundleResponse,
     };
 
     #[test]
@@ -495,5 +495,22 @@ mod tests {
         let expected = r#"["calldata","logs","hash"]"#;
         let actual: PrivacyHint = serde_json::from_str(expected).unwrap();
         assert_eq!(actual, hint);
+    }
+
+    #[test]
+    fn can_dererialize_sim_response() {
+        let expected = r#"
+        {
+            "success": true,
+            "stateBlock": "0x8b8da8",
+            "mevGasPrice": "0x74c7906005",
+            "profit": "0x4bc800904fc000",
+            "refundableValue": "0x4bc800904fc000",
+            "gasUsed": "0xa620",
+            "logs": [{},{}]
+          }
+        "#;
+        let actual: SimBundleResponse = serde_json::from_str(expected).unwrap();
+        assert_eq!(actual.success, true);
     }
 }
