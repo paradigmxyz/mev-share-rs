@@ -187,7 +187,7 @@ impl<'de> Deserialize<'de> for FunctionSelector {
             return Err(serde::de::Error::custom(format!(
                 "Expected 4 byte function selector: {}",
                 hex_str
-            )));
+            )))
         }
 
         let bytes = hex::decode(s).map_err(serde::de::Error::custom)?;
