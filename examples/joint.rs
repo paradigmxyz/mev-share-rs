@@ -1,40 +1,9 @@
-# mev-share-rs
-
-Rust utils for [MEV-share](https://github.com/flashbots/mev-share).
-
-## Server-Sent-Events
-
-Subscribe to MEV-Share [event stream](https://github.com/flashbots/mev-share/tree/main/specs/events) as follows: 
-
-```rs
-use futures_util::StreamExt;
-use mev_share_sse::EventClient;
-use tracing_subscriber::{fmt, prelude::*, EnvFilter};
-
-#[tokio::main]
-async fn main() {
-    tracing_subscriber::registry().with(fmt::layer()).with(EnvFilter::from_default_env()).init();
-
-    let mainnet_sse = "https://mev-share.flashbots.net";
-    let client = EventClient::default();
-    let mut stream = client.events(mainnet_sse).await.unwrap();
-    println!("Subscribed to {}", stream.endpoint());
-
-    while let Some(event) = stream.next().await {
-        dbg!(&event);
-    }
-}
-```
-
-## Sending bundles 
-
-Send [MEV-Share bundles](https://github.com/flashbots/mev-share/tree/main/specs/bundles) as follows: 
-
-```rs
 //! Basic RPC api example
 
+use futures_util::StreamExt;
 use jsonrpsee::http_client::{transport::Error as HttpError, HttpClientBuilder};
 use mev_share_rpc_api::{BundleItem, FlashbotsSignerLayer, MevApiClient, SendBundleRequest};
+use mev_share_sse::EventClient;
 use tower::ServiceBuilder;
 use tracing_subscriber::{fmt, prelude::*, EnvFilter};
 
@@ -47,6 +16,14 @@ use ethers_signers::{LocalWallet, Signer};
 #[tokio::main]
 async fn main() {
     tracing_subscriber::registry().with(fmt::layer()).with(EnvFilter::from_default_env()).init();
+
+    // Subscribe to SSE events 
+    let mainnet_sse = "https://mev-share.flashbots.net";
+    let sse_client = EventClient::default();
+    let mut stream = sse_client.events(mainnet_sse).await.unwrap();
+    println!("Subscribed to {}", stream.endpoint());
+
+    dbg!(&stream.next().await);
 
     // The signer used to authenticate bundles
     let fb_signer = LocalWallet::new(&mut thread_rng());
@@ -91,14 +68,3 @@ async fn main() {
     let sim_res = client.sim_bundle(bundle, Default::default()).await;
     println!("Got a simulation response: {:?}", sim_res);
 }
-```
-
-
-## License
-
-Licensed under either of these:
-
-* Apache License, Version 2.0, ([LICENSE-APACHE](LICENSE-APACHE) or
-  https://www.apache.org/licenses/LICENSE-2.0)
-* MIT license ([LICENSE-MIT](LICENSE-MIT) or
-  https://opensource.org/licenses/MIT)

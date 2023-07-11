@@ -17,8 +17,8 @@ edition = "2021"
 rust-version = "1.70"
 authors = ["Matthias Seitz <matthias.seitz@outlook.de>"]
 license = "MIT OR Apache-2.0"
-homepage = "https://github.com/mattsse/mev-share-rs"
-repository ="https://github.com/mattsse/mev-share-rs"
+homepage = "https://github.com/paradigmxyz/mev-share-rs"
+repository ="https://github.com/paradigmxyz/mev-share-rs"
 
 [workspace.dependencies]
 ## eth
