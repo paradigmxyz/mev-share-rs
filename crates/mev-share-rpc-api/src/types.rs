@@ -1,6 +1,6 @@
 //! MEV-share bundle type bindings
 
-use ethers_core::types::{Address, Bytes, TxHash, U64};
+use ethers_core::types::{Address, BlockId, Bytes, Log, TxHash, U64};
 use serde::{
     ser::{SerializeSeq, Serializer},
     Deserialize, Deserializer, Serialize,
@@ -267,6 +267,71 @@ pub enum ProtocolVersion {
     V0_1,
 }
 
+/// Optional fields to override simulation state.
+#[derive(Deserialize, Debug, Serialize, Clone, Default, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct SimBundleOverrides {
+    /// Block used for simulation state. Defaults to latest block.
+    /// Block header data will be derived from parent block by default.
+    /// Specify other params to override the default values.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub parent_block: Option<BlockId>,
+    /// Block number used for simulation, defaults to parentBlock.number + 1
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub block_number: Option<U64>,
+    /// Coinbase used for simulation, defaults to parentBlock.coinbase
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub coinbase: Option<Address>,
+    /// Timestamp used for simulation, defaults to parentBlock.timestamp + 12
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub timestamp: Option<U64>,
+    /// Gas limit used for simulation, defaults to parentBlock.gasLimit
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub gas_limit: Option<U64>,
+    /// Base fee used for simulation, defaults to parentBlock.baseFeePerGas
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub base_fee: Option<U64>,
+    /// Timeout in seconds, defaults to 5
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub timeout: Option<U64>,
+}
+
+/// Response from the matchmaker after sending a simulation request.
+#[derive(Deserialize, Debug, Serialize, Clone, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct SimBundleResponse {
+    /// Whether the simulation was successful.
+    pub success: bool,
+    /// Error message if the simulation failed.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub error: Option<String>,
+    /// The block number of the simulated block.
+    pub state_block: U64,
+    /// The gas price of the simulated block.
+    pub mev_gas_price: U64,
+    /// The profit of the simulated block.
+    pub profit: U64,
+    /// The refundable value of the simulated block.
+    pub refundable_value: U64,
+    /// The gas used by the simulated block.
+    pub gas_used: U64,
+    /// Logs returned by mev_simBundle.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub logs: Option<Vec<SimBundleLogs>>,
+}
+
+/// Logs returned by mev_simBundle.
+#[derive(Deserialize, Debug, Serialize, Clone, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct SimBundleLogs {
+    /// Logs for transactions in bundle.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub tx_logs: Option<Vec<Log>>,
+    /// Logs for bundles in bundle.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub bundle_logs: Option<Vec<SimBundleLogs>>,
+}
+
 impl SendBundleRequest {
     /// Create a new bundle request.
     pub fn new(
@@ -293,7 +358,7 @@ mod tests {
 
     use crate::{
         types::{ProtocolVersion, SendBundleRequest},
-        BundleItem, Inclusion, Privacy, PrivacyHint, RefundConfig, Validity,
+        BundleItem, Inclusion, Privacy, PrivacyHint, RefundConfig, SimBundleResponse, Validity,
     };
 
     #[test]
@@ -430,5 +495,22 @@ mod tests {
         let expected = r#"["calldata","logs","hash"]"#;
         let actual: PrivacyHint = serde_json::from_str(expected).unwrap();
         assert_eq!(actual, hint);
+    }
+
+    #[test]
+    fn can_dererialize_sim_response() {
+        let expected = r#"
+        {
+            "success": true,
+            "stateBlock": "0x8b8da8",
+            "mevGasPrice": "0x74c7906005",
+            "profit": "0x4bc800904fc000",
+            "refundableValue": "0x4bc800904fc000",
+            "gasUsed": "0xa620",
+            "logs": [{},{}]
+          }
+        "#;
+        let actual: SimBundleResponse = serde_json::from_str(expected).unwrap();
+        assert_eq!(actual.success, true);
     }
 }
