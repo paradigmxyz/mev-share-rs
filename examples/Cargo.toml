@@ -10,19 +10,29 @@ mev-share-rpc-api = { path = "../crates/mev-share-rpc-api", features = ["client"
 
 ## async
 tokio = { version = "1", features = ["macros", "rt", "rt-multi-thread"] }
-futures-util = { version = "0.3" }
+futures-util.workspace = true
 jsonrpsee = { version = "0.18", features = ["client", "async-client"] }
-tower = "0.4.13"
+tower.workspace = true
 
 ## eth 
 ethers-core.workspace = true
 ethers-signers.workspace = true
-tracing-subscriber = { version = "0.3", default-features = false, features = ["env-filter", "fmt"] }
 
+## server
+hyper = { workspace = true, features = ["full"] }
+
+## misc
+tracing.workspace = true
+tracing-subscriber = { version = "0.3", default-features = false, features = ["env-filter", "fmt"] }
 
 [[example]]
 name = "sse"
 path = "sse.rs"
+
+[[example]]
+name = "sse-server"
+path = "sse-server.rs"
+
 [[example]]
 name = "rpc-client"
 path = "rpc-client.rs"

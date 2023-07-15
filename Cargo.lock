@@ -672,11 +672,13 @@ dependencies = [
  "ethers-core",
  "ethers-signers",
  "futures-util",
+ "hyper",
  "jsonrpsee",
  "mev-share-rpc-api",
  "mev-share-sse",
  "tokio",
  "tower",
+ "tracing",
  "tracing-subscriber",
 ]
 
@@ -1502,13 +1504,18 @@ dependencies = [
  "bytes",
  "ethers-core",
  "futures-util",
+ "http",
  "http-types",
+ "hyper",
  "pin-project-lite",
  "reqwest",
  "serde",
  "serde_json",
  "thiserror",
  "tokio",
+ "tokio-stream",
+ "tokio-util",
+ "tower",
  "tracing",
  "tracing-subscriber",
 ]
@@ -2657,6 +2664,7 @@ dependencies = [
  "futures-core",
  "pin-project-lite",
  "tokio",
+ "tokio-util",
 ]
 
 [[package]]
