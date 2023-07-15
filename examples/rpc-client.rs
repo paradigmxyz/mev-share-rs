@@ -25,7 +25,7 @@ async fn main() {
     let signing_middleware = FlashbotsSignerLayer::new(fb_signer);
     let service_builder = ServiceBuilder::new()
         // map signer errors to http errors
-        .map_err(|e| HttpError::Http(e))
+        .map_err(HttpError::Http)
         .layer(signing_middleware);
 
     // Set up the rpc client

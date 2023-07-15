@@ -21,7 +21,7 @@ http-types = { version = "2.12", default-features = false }
 hyper = { workspace = true, features = ["stream"] }
 tower.workspace = true
 tokio-util = { version = "0.7", features = ["compat"] }
-
+tokio-stream = { version = "0.1", features = ["sync"] }
 
 ## misc
 bytes = "1.4"
@@ -31,7 +31,7 @@ http.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 tokio = { version = "1", features = ["time"] }
-tracing = "0.1"
+tracing.workspace = true
 
 [dev-dependencies]
 tokio = { version = "1", features = ["macros", "rt", "rt-multi-thread"] }
