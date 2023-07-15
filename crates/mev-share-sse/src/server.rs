@@ -123,7 +123,6 @@ where
     }
 
     fn call(&mut self, _: Request<Body>) -> Self::Future {
-        // check if the request is for the path we are listening on for SSE
         // acquire the receiver and perform the upgrade
         let get_receiver = (self.handler)();
         let fut = async {
