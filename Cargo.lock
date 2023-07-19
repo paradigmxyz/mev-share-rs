@@ -1481,6 +1481,17 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2dffe52ecf27772e601905b7522cb4ef790d2cc203488bbd0e2fe85fcb74566d"
 
 [[package]]
+name = "mev-share-backend"
+version = "0.1.0"
+dependencies = [
+ "futures-util",
+ "mev-share-rpc-api",
+ "pin-project-lite",
+ "thiserror",
+ "tokio",
+]
+
+[[package]]
 name = "mev-share-rpc-api"
 version = "0.1.0"
 dependencies = [
@@ -1778,9 +1789,9 @@ dependencies = [
 
 [[package]]
 name = "pin-project-lite"
-version = "0.2.9"
+version = "0.2.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e0a7ae3ac2f1173085d398531c705756c94a4c56843785df85a60c1a0afac116"
+checksum = "4c40d25201921e5ff0c862a505c6557ea88568a4e3ace775ab55e93f2f4f9d57"
 
 [[package]]
 name = "pin-utils"

@@ -9,7 +9,7 @@ mev-share-sse = { path = "../crates/mev-share-sse" }
 mev-share-rpc-api = { path = "../crates/mev-share-rpc-api", features = ["client", "server"] }
 
 ## async
-tokio = { version = "1", features = ["macros", "rt", "rt-multi-thread"] }
+tokio = { workspace = true, features = ["macros", "rt", "rt-multi-thread"] }
 futures-util.workspace = true
 jsonrpsee = { version = "0.18", features = ["client", "async-client"] }
 tower.workspace = true
