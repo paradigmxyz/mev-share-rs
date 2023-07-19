@@ -1,6 +1,6 @@
 //! # mev-share-rs
 //!
-//! A client library for MEV-Share written in rust. 
+//! A client library for MEV-Share written in rust.
 
 #![warn(missing_docs, unreachable_pub, unused_crate_dependencies)]
 #![deny(unused_must_use, rust_2018_idioms)]
