@@ -1,0 +1,16 @@
+[package]
+name = "mev-share"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+homepage.workspace = true
+repository.workspace = true
+description = """
+MEV-share client in rust
+"""
+
+[dependencies]
+mev-share-rpc-api.workspace = true
+mev-share-sse.workspace = true
