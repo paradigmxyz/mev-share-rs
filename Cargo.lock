@@ -1482,7 +1482,7 @@ checksum = "2dffe52ecf27772e601905b7522cb4ef790d2cc203488bbd0e2fe85fcb74566d"
 
 [[package]]
 name = "mev-share"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "mev-share-rpc-api",
  "mev-share-sse",
@@ -1490,7 +1490,7 @@ dependencies = [
 
 [[package]]
 name = "mev-share-rpc-api"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "ethers-core",
  "ethers-signers",
@@ -1506,7 +1506,7 @@ dependencies = [
 
 [[package]]
 name = "mev-share-sse"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "async-sse",
  "bytes",
