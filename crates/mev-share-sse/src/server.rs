@@ -10,15 +10,17 @@ use serde::Serialize;
 use std::{
     convert::Infallible,
     error::Error,
+    fmt,
     future::Future,
     pin::Pin,
     sync::Arc,
     task::{ready, Context, Poll},
 };
-use tokio::sync::{broadcast, broadcast::error::SendError};
+use tokio::sync::broadcast;
 use tokio_stream::wrappers::BroadcastStream;
 use tokio_util::{compat::FuturesAsyncReadCompatExt, io::ReaderStream};
 use tower::{Layer, Service};
+use tracing::debug;
 
 /// A helper type that can be used to create a [`SseBroadcastLayer`].
 ///
@@ -41,9 +43,12 @@ impl SseBroadcaster {
     pub fn ready_stream(
         &self,
     ) -> futures_util::future::Ready<Result<SseBroadcastStream, Box<dyn Error + Send + Sync>>> {
-        futures_util::future::ready(Ok(SseBroadcastStream {
-            st: BroadcastStream::new(self.subscribe()),
-        }))
+        futures_util::future::ready(Ok(self.stream()))
+    }
+
+    /// Returns a new stream of [SSeBroadcastMessage].
+    pub fn stream(&self) -> SseBroadcastStream {
+        SseBroadcastStream { st: BroadcastStream::new(self.subscribe()) }
     }
 
     /// Creates a new Receiver handle that will receive values sent after this call to subscribe.
@@ -54,13 +59,26 @@ impl SseBroadcaster {
     /// Sends a message to all subscribers.
     ///
     /// See also [`Sender::send`](broadcast::Sender::send)
-    pub fn send<T: Serialize>(&self, msg: &T) -> Result<usize, SendError<SSeBroadcastMessage>> {
-        let msg = SSeBroadcastMessage(Arc::from(serde_json::to_string(msg).unwrap()));
-        self.sender.send(msg)
+    pub fn send<T: Serialize>(&self, msg: &T) -> Result<usize, SseSendError> {
+        let msg = SSeBroadcastMessage(Arc::from(serde_json::to_string(msg)?));
+        self.sender.send(msg).map_err(|err| SseSendError::ChannelClosed(err.0.as_ref().to_string()))
     }
 }
 
+/// Error returned by [`SseBroadcastLayer`].
+#[derive(Debug, thiserror::Error)]
+pub enum SseSendError {
+    /// Failed to serialize the message before sending.
+    #[error("failed to serialize message: {0}")]
+    Json(#[from] serde_json::Error),
+    /// Failed to send the message.
+    #[error("failed to send message because broadcast channel closed")]
+    ChannelClosed(String),
+}
+
 /// Helper new type to make Arc<str> AsRef str.
+///
+/// Note: This is a workaround for the fact that Arc<str> does not implement AsRef<str>.
 #[derive(Clone, Debug)]
 pub struct SSeBroadcastMessage(Arc<str>);
 
@@ -70,8 +88,19 @@ impl AsRef<str> for SSeBroadcastMessage {
     }
 }
 
-/// A Stream that emits SSE messages.
+impl fmt::Display for SSeBroadcastMessage {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.0.fmt(f)
+    }
+}
 
+impl Serialize for SSeBroadcastMessage {
+    fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        self.as_ref().serialize(serializer)
+    }
+}
+
+/// A Stream that emits SSE messages.
 #[must_use = "streams do nothing unless polled"]
 #[derive(Debug)]
 pub struct SseBroadcastStream {
@@ -87,13 +116,26 @@ impl Stream for SseBroadcastStream {
             match ready!(this.st.poll_next_unpin(cx)) {
                 None => return Poll::Ready(None),
                 Some(Ok(item)) => return Poll::Ready(Some(item)),
-                Some(Err(_)) => continue,
+                Some(Err(err)) => {
+                    debug!("broadcast stream is lagging: {err}");
+                    continue
+                }
             }
         }
     }
 }
 
 /// A service impl that handles SSE requests.
+///
+///
+/// # Example
+///
+/// ```
+/// use mev_share_sse::server::{SseBroadcaster, SseBroadcastService};
+/// let (tx, _rx) = tokio::sync::broadcast::channel(1000);
+/// let broadcaster = SseBroadcaster::new(tx);
+/// let svc = SseBroadcastService::new(move || broadcaster.ready_stream());
+/// ```
 #[derive(Debug, Clone)]
 pub struct SseBroadcastService<F> {
     handler: F,
