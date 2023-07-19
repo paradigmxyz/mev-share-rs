@@ -23,8 +23,9 @@ repository ="https://github.com/paradigmxyz/mev-share-rs"
 
 [workspace.dependencies]
 ## workspace crates
-mev-share-sse = { path = "crates/mev-share-sse" }
-mev-share-rpc-api = { path = "crates/mev-share-rpc-api" }
+mev-share = { version = "0.1.0", path = "crates/mev-share" }
+mev-share-sse = { version = "0.1.0", path = "crates/mev-share-sse" }
+mev-share-rpc-api = { version = "0.1.0", path = "crates/mev-share-rpc-api" }
 
 ## eth
 ethers-core = { version = "2.0", default-features = false }
