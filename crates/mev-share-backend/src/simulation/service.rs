@@ -1,8 +1,5 @@
-//! MEV-Share simulation backend.
+//! Service implementation for queueing simulation stops.
 
-use futures_util::{stream::FuturesUnordered, Stream, StreamExt};
-use mev_share_rpc_api::{SendBundleRequest, SimBundleOverrides, SimBundleResponse};
-use pin_project_lite::pin_project;
 use std::{
     collections::VecDeque,
     error::Error,
@@ -11,31 +8,12 @@ use std::{
     sync::{atomic::AtomicU64, Arc},
     task::{ready, Context, Poll},
 };
+
+use crate::simulation::{BundleSimulationOutcome, BundleSimulator, SimulatedBundle};
+use futures_util::{stream::FuturesUnordered, Stream, StreamExt};
+use mev_share_rpc_api::{SendBundleRequest, SimBundleOverrides};
+use pin_project_lite::pin_project;
 use tokio::sync::{mpsc, oneshot};
-
-/// A type that can start a bundle simulation.
-pub trait BundleSimulator: Unpin + Send + Sync {
-    /// An in progress bundle simulation.
-    type Simulation: Future<Output = BundleSimulationOutcome> + Unpin + Send + Sync;
-
-    /// Starts a bundle simulation.
-    fn simulate_bundle(
-        &self,
-        bundle: SendBundleRequest,
-        sim_overrides: SimBundleOverrides,
-    ) -> Self::Simulation;
-}
-
-/// Errors that can occur when simulating a bundle.
-#[derive(Debug)]
-pub enum BundleSimulationOutcome {
-    /// The simulation was successful.
-    Success(SimBundleResponse),
-    /// The simulation failed and is not recoverable.
-    Fatal(Box<dyn Error + Send + Sync>),
-    /// The simulation failed and should be rescheduled.
-    Reschedule(Box<dyn Error + Send + Sync>),
-}
 
 /// Frontend type that can communicate with [BundleSimulatorService].
 #[derive(Debug, Clone)]
@@ -48,6 +26,8 @@ pub struct BundleSimulatorHandle {
 struct BundleSimulatorInner {
     /// tracks the number of queued jobs.
     queued_jobs: AtomicU64,
+    /// The current block number.
+    current_block_number: AtomicU64,
 }
 
 // === impl BundleSimulatorHandle ===
@@ -84,8 +64,6 @@ impl BundleSimulatorHandle {
 /// Provides a service for simulating bundles.
 #[must_use = "futures do nothing unless you `.await` or poll them"]
 pub struct BundleSimulatorService<Sim: BundleSimulator> {
-    /// The current block number.
-    current_block_number: u64,
     /// Creates new simulations.
     simulator: Sim,
     /// The current simulations.
@@ -112,9 +90,11 @@ impl<Sim: BundleSimulator> BundleSimulatorService<Sim> {
         config: BundleSimulatorServiceConfig,
     ) -> Self {
         let (to_service, from_handle) = mpsc::unbounded_channel();
-        let inner = Arc::new(BundleSimulatorInner { queued_jobs: AtomicU64::new(0) });
+        let inner = Arc::new(BundleSimulatorInner {
+            queued_jobs: AtomicU64::new(0),
+            current_block_number: AtomicU64::new(current_block_number),
+        });
         Self {
-            current_block_number,
             simulator,
             simulations: Default::default(),
             high_priority_queue: Default::default(),
@@ -135,6 +115,10 @@ impl<Sim: BundleSimulator> BundleSimulatorService<Sim> {
         }
     }
 
+    fn current_block_number(&self) -> u64 {
+        self.inner.current_block_number.load(std::sync::atomic::Ordering::Relaxed)
+    }
+
     /// Notifies all listeners of the given event.
     fn notify_listeners(&mut self, event: SimulationEvent) {
         self.listeners.retain(|l| l.send(event.clone()).is_ok());
@@ -144,12 +128,15 @@ impl<Sim: BundleSimulator> BundleSimulatorService<Sim> {
     fn on_message(&mut self, msg: BundleSimulatorMessage) {
         match msg {
             BundleSimulatorMessage::UpdateBlockNumber(num) => {
-                if num != self.current_block_number {
-                    let old = self.current_block_number;
-                    self.current_block_number = num;
+                let current_block_number = self.current_block_number();
+                if num != current_block_number {
+                    let old = current_block_number;
+                    self.inner
+                        .current_block_number
+                        .store(num, std::sync::atomic::Ordering::Relaxed);
                     self.notify_listeners(SimulationEvent::BlockNumberUpdated {
                         old,
-                        current: self.current_block_number,
+                        current: current_block_number,
                     });
                 }
             }
@@ -159,7 +146,7 @@ impl<Sim: BundleSimulator> BundleSimulatorService<Sim> {
             BundleSimulatorMessage::AddEventListener(tx) => {
                 self.listeners.push(tx);
             }
-            BundleSimulatorMessage::AddSimulation { request, tx } => {
+            BundleSimulatorMessage::AddSimulation { request: _, tx: _ } => {
                 // TODO add simulation
             }
         }
@@ -219,11 +206,15 @@ where
 pub struct BundleSimulatorServiceConfig {
     /// Maximum number of retries for a simulation.
     pub max_retries: usize,
+    /// Maximum number of _unprocessed_ jobs in the normal priority queue.
+    pub max_normal_prio_queue_len: usize,
+    /// Maximum number of _unprocessed_ jobs in the high priority queue.
+    pub max_high_prio_queue_len: usize,
 }
 
 impl Default for BundleSimulatorServiceConfig {
     fn default() -> Self {
-        Self { max_retries: 30 }
+        Self { max_retries: 30, max_normal_prio_queue_len: 1024, max_high_prio_queue_len: 2048 }
     }
 }
 
@@ -375,39 +366,4 @@ struct SimulationRequest {
     overrides: SimBundleOverrides,
     /// The priority of the simulation.
     priority: SimulationPriority,
-}
-
-/// A simulated bundle.
-#[derive(Debug, Clone)]
-pub struct SimulatedBundle {
-    /// The request object that was used for simulation.
-    pub request: SendBundleRequest,
-    /// The overrides that were used for simulation.
-    pub overrides: SimBundleOverrides,
-    /// The response from the simulation.simulation
-    pub response: SimBundleResponse,
-    /// The number of retries that were used for simulation.
-    pub retries: usize,
-}
-
-impl SimulatedBundle {
-    /// Returns true if the simulation was successful.
-    pub fn is_success(&self) -> bool {
-        self.response.success
-    }
-
-    /// Returns the profit of the simulation.
-    pub fn profit(&self) -> u64 {
-        self.response.profit.as_u64()
-    }
-
-    /// Returns the gas used by the simulation.
-    pub fn gas_used(&self) -> u64 {
-        self.response.gas_used.as_u64()
-    }
-
-    /// Returns the mev gas price of the simulation.
-    pub fn mev_gas_price(&self) -> u64 {
-        self.response.mev_gas_price.as_u64()
-    }
 }

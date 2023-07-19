@@ -8,7 +8,7 @@ license.workspace = true
 homepage.workspace = true
 repository.workspace = true
 description = """
-MEV-share backend abstractions
+MEV-share backend support
 """
 
 [dependencies]
@@ -17,7 +17,7 @@ mev-share-rpc-api = { path = "../mev-share-rpc-api" }
 
 ## async
 pin-project-lite = "0.2"
-tokio.workspace = { workspace = true, features = ["sync"] }
+tokio = { workspace = true, features = ["sync"] }
 futures-util.workspace = true
 
 ## misc
