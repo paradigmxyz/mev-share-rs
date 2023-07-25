@@ -1,9 +1,9 @@
 //! MEV-Share simulation backend.
 
+use mev_share_rpc_api::{SendBundleRequest, SimBundleOverrides, SimBundleResponse};
 use std::{error::Error, future::Future};
 
-use mev_share_rpc_api::{SendBundleRequest, SimBundleOverrides, SimBundleResponse};
-
+mod rpc;
 mod service;
 pub use service::*;
 

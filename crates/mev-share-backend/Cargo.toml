@@ -13,7 +13,7 @@ MEV-share backend support
 
 [dependencies]
 ## eth
-mev-share-rpc-api = { path = "../mev-share-rpc-api" }
+mev-share-rpc-api = { path = "../mev-share-rpc-api", features = ["client"] }
 
 ## async
 pin-project-lite = "0.2"
