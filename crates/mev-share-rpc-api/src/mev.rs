@@ -22,24 +22,43 @@ pub trait MevApi {
     ) -> RpcResult<SimBundleResponse>;
 }
 
+/// An object safe version of the `MevApiClient` trait.
 #[async_trait::async_trait]
-pub trait MevApiExt {
-    async fn send_bundle_request(
+pub(crate) trait MevApiExt {
+    /// Submitting bundles to the relay. It takes in a bundle and provides a bundle hash as a return
+    /// value.
+    async fn send_bundle(
         &self,
         request: SendBundleRequest,
     ) -> Result<SendBundleResponse, jsonrpsee::core::Error>;
+
+    /// Similar to `mev_sendBundle` but instead of submitting a bundle to the relay, it returns a
+    /// simulation result. Only fully matched bundles can be simulated.
+    async fn sim_bundle(
+        &self,
+        bundle: SendBundleRequest,
+        sim_overrides: SimBundleOverrides,
+    ) -> Result<SimBundleResponse, jsonrpsee::core::Error>;
 }
 
 #[async_trait::async_trait]
 impl<T> MevApiExt for T
 where
-    T: MevApiClient + Sync + Send,
+    T: MevApiClient + Sync,
 {
-    async fn send_bundle_request(
+    async fn send_bundle(
         &self,
         request: SendBundleRequest,
     ) -> Result<SendBundleResponse, jsonrpsee::core::Error> {
-        self.send_bundle(request).await
+        MevApiClient::send_bundle(self, request).await
+    }
+
+    async fn sim_bundle(
+        &self,
+        bundle: SendBundleRequest,
+        sim_overrides: SimBundleOverrides,
+    ) -> Result<SimBundleResponse, jsonrpsee::core::Error> {
+        MevApiClient::sim_bundle(self, bundle, sim_overrides).await
     }
 }
 
@@ -49,12 +68,15 @@ mod tests {
     use crate::FlashbotsSignerLayer;
     use ethers_core::rand::thread_rng;
     use ethers_signers::LocalWallet;
-    use jsonrpsee::http_client::{transport, HttpClient, HttpClientBuilder};
+    use jsonrpsee::http_client::{transport, HttpClientBuilder};
 
-    #[tokio::test]
-    async fn test_box() {
+    struct Client {
+        inner: Box<dyn MevApiExt>,
+    }
+
+    #[allow(dead_code)]
+    async fn assert_mev_api_box() {
         let fb_signer = LocalWallet::new(&mut thread_rng());
-
         let http = HttpClientBuilder::default()
             .set_middleware(
                 tower::ServiceBuilder::new()
@@ -63,15 +85,17 @@ mod tests {
             )
             .build("http://localhost:3030")
             .unwrap();
-        let b = Box::new(http) as Box<dyn MevApiExt>;
-        b.send_bundle_request(SendBundleRequest {
-            protocol_version: Default::default(),
-            inclusion: Default::default(),
-            bundle_body: vec![],
-            validity: None,
-            privacy: None,
-        })
-        .await
-        .unwrap();
+        let client = Client { inner: Box::new(http) };
+        client
+            .inner
+            .send_bundle(SendBundleRequest {
+                protocol_version: Default::default(),
+                inclusion: Default::default(),
+                bundle_body: vec![],
+                validity: None,
+                privacy: None,
+            })
+            .await
+            .unwrap();
     }
 }
