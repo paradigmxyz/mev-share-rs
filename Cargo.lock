@@ -1492,6 +1492,7 @@ dependencies = [
 name = "mev-share-rpc-api"
 version = "0.1.0"
 dependencies = [
+ "async-trait",
  "ethers-core",
  "ethers-signers",
  "futures-util",
