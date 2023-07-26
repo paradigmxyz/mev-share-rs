@@ -1,30 +1,45 @@
 use crate::{SendBundleRequest, SendBundleResponse, SimBundleOverrides, SimBundleResponse};
-use jsonrpsee::{core::RpcResult, proc_macros::rpc};
 
-/// Mev rpc interface.
-#[cfg_attr(not(feature = "client"), rpc(server, namespace = "mev"))]
-#[cfg_attr(all(feature = "client", feature = "server"), rpc(server, client, namespace = "mev"))]
-#[cfg_attr(not(feature = "server"), rpc(client, namespace = "mev"))]
-#[async_trait::async_trait]
-pub trait MevApi {
-    /// Submitting bundles to the relay. It takes in a bundle and provides a bundle hash as a return
-    /// value.
-    #[method(name = "sendBundle")]
-    async fn send_bundle(&self, request: SendBundleRequest) -> RpcResult<SendBundleResponse>;
+// re-export the rpc server trait
+#[cfg(feature = "server")]
+pub use rpc::MevApiServer;
 
-    /// Similar to `mev_sendBundle` but instead of submitting a bundle to the relay, it returns a
-    /// simulation result. Only fully matched bundles can be simulated.
-    #[method(name = "simBundle")]
-    async fn sim_bundle(
-        &self,
-        bundle: SendBundleRequest,
-        sim_overrides: SimBundleOverrides,
-    ) -> RpcResult<SimBundleResponse>;
+/// jsonrpsee generated code.
+///
+/// This hides the generated client trait which is replaced by the `MevApiClient` trait.
+mod rpc {
+    use crate::{SendBundleRequest, SendBundleResponse, SimBundleOverrides, SimBundleResponse};
+    use jsonrpsee::proc_macros::rpc;
+
+    /// Mev rpc interface.
+    #[cfg_attr(not(feature = "client"), rpc(server, namespace = "mev"))]
+    #[cfg_attr(all(feature = "client", feature = "server"), rpc(server, client, namespace = "mev"))]
+    #[cfg_attr(not(feature = "server"), rpc(client, namespace = "mev"))]
+    #[async_trait::async_trait]
+    pub trait MevApi {
+        /// Submitting bundles to the relay. It takes in a bundle and provides a bundle hash as a
+        /// return value.
+        #[method(name = "sendBundle")]
+        async fn send_bundle(
+            &self,
+            request: SendBundleRequest,
+        ) -> jsonrpsee::core::RpcResult<SendBundleResponse>;
+
+        /// Similar to `mev_sendBundle` but instead of submitting a bundle to the relay, it returns
+        /// a simulation result. Only fully matched bundles can be simulated.
+        #[method(name = "simBundle")]
+        async fn sim_bundle(
+            &self,
+            bundle: SendBundleRequest,
+            sim_overrides: SimBundleOverrides,
+        ) -> jsonrpsee::core::RpcResult<SimBundleResponse>;
+    }
 }
 
 /// An object safe version of the `MevApiClient` trait.
+#[cfg(feature = "client")]
 #[async_trait::async_trait]
-pub(crate) trait MevApiExt {
+pub trait MevApiClient {
     /// Submitting bundles to the relay. It takes in a bundle and provides a bundle hash as a return
     /// value.
     async fn send_bundle(
@@ -41,16 +56,17 @@ pub(crate) trait MevApiExt {
     ) -> Result<SimBundleResponse, jsonrpsee::core::Error>;
 }
 
+#[cfg(feature = "client")]
 #[async_trait::async_trait]
-impl<T> MevApiExt for T
+impl<T> MevApiClient for T
 where
-    T: MevApiClient + Sync,
+    T: rpc::MevApiClient + Sync,
 {
     async fn send_bundle(
         &self,
         request: SendBundleRequest,
     ) -> Result<SendBundleResponse, jsonrpsee::core::Error> {
-        MevApiClient::send_bundle(self, request).await
+        rpc::MevApiClient::send_bundle(self, request).await
     }
 
     async fn sim_bundle(
@@ -58,11 +74,11 @@ where
         bundle: SendBundleRequest,
         sim_overrides: SimBundleOverrides,
     ) -> Result<SimBundleResponse, jsonrpsee::core::Error> {
-        MevApiClient::sim_bundle(self, bundle, sim_overrides).await
+        rpc::MevApiClient::sim_bundle(self, bundle, sim_overrides).await
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "client"))]
 mod tests {
     use super::*;
     use crate::FlashbotsSignerLayer;
@@ -71,7 +87,7 @@ mod tests {
     use jsonrpsee::http_client::{transport, HttpClientBuilder};
 
     struct Client {
-        inner: Box<dyn MevApiExt>,
+        inner: Box<dyn MevApiClient>,
     }
 
     #[allow(dead_code)]
