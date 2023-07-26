@@ -13,7 +13,7 @@ members = [
 resolver = "2"
 
 [workspace.package]
-version = "0.1.2"
+version = "0.1.4"
 edition = "2021"
 rust-version = "1.70"
 authors = ["mev-share-rs devs"]
@@ -23,9 +23,9 @@ repository ="https://github.com/paradigmxyz/mev-share-rs"
 
 [workspace.dependencies]
 ## workspace crates
-mev-share = { version = "0.1.2", path = "crates/mev-share" }
-mev-share-sse = { version = "0.1.2", path = "crates/mev-share-sse" }
-mev-share-rpc-api = { version = "0.1.2", path = "crates/mev-share-rpc-api" }
+mev-share = { version = "0.1.4", path = "crates/mev-share" }
+mev-share-sse = { version = "0.1.4", path = "crates/mev-share-sse" }
+mev-share-rpc-api = { version = "0.1.4", path = "crates/mev-share-rpc-api" }
 
 ## eth
 ethers-core = { version = "2.0", default-features = false }
