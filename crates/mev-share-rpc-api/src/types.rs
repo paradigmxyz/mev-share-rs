@@ -511,6 +511,6 @@ mod tests {
           }
         "#;
         let actual: SimBundleResponse = serde_json::from_str(expected).unwrap();
-        assert_eq!(actual.success, true);
+        assert!(actual.success);
     }
 }
