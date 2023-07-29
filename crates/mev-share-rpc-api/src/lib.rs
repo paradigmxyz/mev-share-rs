@@ -39,5 +39,9 @@ pub use clients::*;
 #[cfg(feature = "client")]
 #[doc(hidden)]
 pub mod clients {
-    pub use crate::{auth::FlashbotsSignerLayer, eth::EthBundleApiClient, mev::MevApiClient};
+    pub use crate::{
+        auth::{FlashbotsSigner, FlashbotsSignerLayer},
+        eth::EthBundleApiClient,
+        mev::MevApiClient,
+    };
 }

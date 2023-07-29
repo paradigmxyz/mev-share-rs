@@ -23,6 +23,7 @@ http.workspace = true
 hyper = { workspace = true, features = ["stream"] }
 tower.workspace = true
 futures-util.workspace = true
+async-trait.workspace = true
 
 
 [dev-dependencies]
