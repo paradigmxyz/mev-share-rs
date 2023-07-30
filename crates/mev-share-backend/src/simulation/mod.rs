@@ -7,10 +7,12 @@ mod rpc;
 mod service;
 pub use service::*;
 
+pub use rpc::RpcSimulator;
+
 /// A type that can start a bundle simulation.
 pub trait BundleSimulator: Unpin + Send + Sync {
     /// An in progress bundle simulation.
-    type Simulation: Future<Output = BundleSimulationOutcome> + Unpin + Send + Sync;
+    type Simulation: Future<Output = BundleSimulationOutcome> + Unpin + Send;
 
     /// Starts a bundle simulation.
     fn simulate_bundle(

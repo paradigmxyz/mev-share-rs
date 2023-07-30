@@ -1,12 +1,12 @@
 //! Service implementation for queueing simulation stops.
 
 use std::{
-    collections::VecDeque,
     error::Error,
     future::Future,
     pin::Pin,
     sync::{atomic::AtomicU64, Arc},
     task::{ready, Context, Poll},
+    time::Instant,
 };
 
 use crate::simulation::{BundleSimulationOutcome, BundleSimulator, SimulatedBundle};
@@ -38,19 +38,61 @@ impl BundleSimulatorHandle {
         self.inner.queued_jobs.load(std::sync::atomic::Ordering::Relaxed)
     }
 
+    /// Updates the current block number.
+    pub fn update_block_number(&self, block_number: u64) {
+        self.to_service.send(BundleSimulatorMessage::UpdateBlockNumber(block_number)).ok();
+    }
+
+    /// Clears all queued jobs.
+    pub fn clear_queue(&self) {
+        self.to_service.send(BundleSimulatorMessage::ClearQueue).ok();
+    }
+
     /// Adds a new bundle simulation to the queue.
-    pub fn add_bundle_simulation(
+    ///
+    /// Returns an error when the service failed to queue in the simulation.
+    pub fn send_bundle_simulation(
         &self,
         request: SendBundleRequest,
         overrides: SimBundleOverrides,
         priority: SimulationPriority,
-    ) {
-        let (tx, _rx) = oneshot::channel();
-        // TODO make async
-        let _ = self.to_service.send(BundleSimulatorMessage::AddSimulation {
-            request: SimulationRequest { request, priority, overrides },
+    ) -> Result<(), AddSimulationErr> {
+        let (tx, ..) = oneshot::channel();
+        self.to_service.send(BundleSimulatorMessage::AddSimulation {
+            request: SimulationRequest {
+                request,
+                priority,
+                overrides,
+                backed_off_until: None,
+                retries: 0,
+            },
             tx,
-        });
+        })?;
+        Ok(())
+    }
+
+    /// Adds a new bundle simulation to the queue.
+    ///
+    /// Returns an error when the service failed to queue in the simulation.
+    pub async fn add_bundle_simulation(
+        &self,
+        request: SendBundleRequest,
+        overrides: SimBundleOverrides,
+        priority: SimulationPriority,
+    ) -> Result<(), AddSimulationErr> {
+        let (tx, rx) = oneshot::channel();
+        self.to_service.send(BundleSimulatorMessage::AddSimulation {
+            request: SimulationRequest {
+                request,
+                priority,
+                overrides,
+                backed_off_until: None,
+                retries: 0,
+            },
+            tx,
+        })?;
+
+        rx.await.map_err(|_| AddSimulationErr::ServiceUnavailable)?
     }
 
     /// Returns a new listener for simulation events.
@@ -68,8 +110,8 @@ pub struct BundleSimulatorService<Sim: BundleSimulator> {
     simulator: Sim,
     /// The current simulations.
     simulations: FuturesUnordered<Simulation<Sim::Simulation>>,
-    high_priority_queue: VecDeque<SimulationRequest>,
-    normal_priority_queue: VecDeque<SimulationRequest>,
+    high_priority_queue: Vec<SimulationRequest>,
+    normal_priority_queue: Vec<SimulationRequest>,
     /// incoming messages from the handle.
     from_handle: mpsc::UnboundedReceiver<BundleSimulatorMessage>,
     /// Copy of the handle sender to keep the channel open.
@@ -124,6 +166,80 @@ impl<Sim: BundleSimulator> BundleSimulatorService<Sim> {
         self.listeners.retain(|l| l.send(event.clone()).is_ok());
     }
 
+    fn has_high_priority_capacity(&self) -> bool {
+        self.high_priority_queue.len() < self.config.max_high_prio_queue_len
+    }
+
+    fn has_normal_priority_capacity(&self) -> bool {
+        self.normal_priority_queue.len() < self.config.max_normal_prio_queue_len
+    }
+
+    fn pop_next_ready(&mut self, next_block: u64, now: Instant) -> Option<SimulationRequest> {
+        loop {
+            let mut outdated = false;
+            let pos = self
+                .high_priority_queue
+                .iter()
+                .chain(self.normal_priority_queue.iter())
+                // skip requests not ready for inclusion
+                .position(|req| {
+                    if !req.is_ready_at(now) {
+                        return false
+                    }
+                    if req.exceeds_target_block(next_block) {
+                        outdated = true;
+                        return true
+                    }
+                    req.is_min_block(next_block)
+                });
+
+            if let Some(mut pos) = pos {
+                let item = if pos > self.high_priority_queue.len() {
+                    pos -= self.high_priority_queue.len();
+                    self.normal_priority_queue.remove(pos)
+                } else {
+                    self.high_priority_queue.remove(pos)
+                };
+
+                if outdated {
+                    self.notify_listeners(SimulationEvent::OutdatedRequest {
+                        request: item.request,
+                        overrides: item.overrides,
+                        next_block,
+                    });
+                    continue
+                }
+
+                return Some(item)
+            }
+
+            return None
+        }
+    }
+
+    /// Returns a [SimulationRequest] that is ready to be simulated.
+    fn pop_best_requests(&mut self, now: Instant) -> Vec<SimulationRequest> {
+        let mut requests = vec![];
+        let capacity =
+            self.config.max_concurrent_simulations.saturating_sub(self.simulations.len());
+        if capacity == 0 {
+            return requests
+        }
+
+        let current_block = self.current_block_number();
+        let next_block = current_block + 1;
+
+        while requests.len() != capacity {
+            if let Some(req) = self.pop_next_ready(next_block, now) {
+                requests.push(req);
+            } else {
+                break
+            }
+        }
+
+        requests
+    }
+
     /// Processes a new message from the handle.
     fn on_message(&mut self, msg: BundleSimulatorMessage) {
         match msg {
@@ -140,23 +256,40 @@ impl<Sim: BundleSimulator> BundleSimulatorService<Sim> {
                     });
                 }
             }
-            BundleSimulatorMessage::ClearJobs { res: _ } => {
-                // TODO clear
+            BundleSimulatorMessage::ClearQueue => {
+                self.high_priority_queue.clear();
+                self.normal_priority_queue.clear();
             }
             BundleSimulatorMessage::AddEventListener(tx) => {
                 self.listeners.push(tx);
             }
-            BundleSimulatorMessage::AddSimulation { request: _, tx: _ } => {
-                // TODO add simulation
+            BundleSimulatorMessage::AddSimulation { request, tx } => {
+                if request.priority.is_high() {
+                    if self.has_high_priority_capacity() {
+                        self.high_priority_queue.push(request);
+                        tx.send(Ok(())).ok();
+                    } else {
+                        tx.send(Err(AddSimulationErr::QueueFull)).ok();
+                    }
+                } else if self.has_normal_priority_capacity() {
+                    self.normal_priority_queue.push(request);
+                    tx.send(Ok(())).ok();
+                } else {
+                    tx.send(Err(AddSimulationErr::QueueFull)).ok();
+                }
             }
         }
     }
 
     /// Processes a finished simulation.
-    fn on_simulation_outcome(&mut self, outcome: BundleSimulationOutcome, sim: SimulationInner) {
+    fn on_simulation_outcome(
+        &mut self,
+        outcome: BundleSimulationOutcome,
+        mut sim: SimulationRequest,
+    ) {
         match outcome {
             BundleSimulationOutcome::Success(resp) => {
-                let SimulationInner { retries, request, overrides } = sim;
+                let SimulationRequest { retries, request, overrides, .. } = sim;
                 self.notify_listeners(SimulationEvent::SimulatedBundle(Ok(SimulatedBundle {
                     request,
                     overrides,
@@ -172,7 +305,19 @@ impl<Sim: BundleSimulator> BundleSimulatorService<Sim> {
             }
             BundleSimulationOutcome::Reschedule(_error) => {
                 // reschedule the simulation.
-                // TODO reschedule
+                sim.retries += 1;
+                if sim.retries > self.config.max_retries {
+                    self.notify_listeners(SimulationEvent::ExceededMaxRetries {
+                        request: sim.request,
+                        overrides: sim.overrides,
+                    });
+                    return
+                }
+                if sim.priority.is_high() {
+                    self.high_priority_queue.push(sim);
+                } else {
+                    self.normal_priority_queue.push(sim);
+                }
             }
         }
     }
@@ -187,14 +332,30 @@ where
     fn poll(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
         let this = self.get_mut();
 
-        // drain incoming messages from the handle.
-        while let Poll::Ready(Some(msg)) = this.from_handle.poll_recv(cx) {
-            this.on_message(msg);
-        }
+        loop {
+            // drain incoming messages from the handle.
+            while let Poll::Ready(Some(msg)) = this.from_handle.poll_recv(cx) {
+                this.on_message(msg);
+            }
 
-        // process all completed simulations.
-        while let Poll::Ready(Some((outcome, inner))) = this.simulations.poll_next_unpin(cx) {
-            this.on_simulation_outcome(outcome, inner);
+            // process all completed simulations.
+            while let Poll::Ready(Some((outcome, inner))) = this.simulations.poll_next_unpin(cx) {
+                this.on_simulation_outcome(outcome, inner);
+            }
+
+            // try to queue in a new simulation request
+            let ready = this.pop_best_requests(Instant::now());
+            let no_more_work = !ready.is_empty();
+            for req in ready {
+                let sim =
+                    this.simulator.simulate_bundle(req.request.clone(), req.overrides.clone());
+                let sim = Simulation::new(sim, req);
+                this.simulations.push(sim);
+            }
+
+            if no_more_work {
+                break
+            }
         }
 
         Poll::Pending
@@ -210,11 +371,18 @@ pub struct BundleSimulatorServiceConfig {
     pub max_normal_prio_queue_len: usize,
     /// Maximum number of _unprocessed_ jobs in the high priority queue.
     pub max_high_prio_queue_len: usize,
+    /// Maximum number of concurrently active simulations.
+    pub max_concurrent_simulations: usize,
 }
 
 impl Default for BundleSimulatorServiceConfig {
     fn default() -> Self {
-        Self { max_retries: 30, max_normal_prio_queue_len: 1024, max_high_prio_queue_len: 2048 }
+        Self {
+            max_retries: 30,
+            max_normal_prio_queue_len: 1024,
+            max_high_prio_queue_len: 2048,
+            max_concurrent_simulations: 32,
+        }
     }
 }
 
@@ -223,13 +391,13 @@ pin_project! {
     struct Simulation<Sim> {
         #[pin]
         sim: Sim,
-        inner: Option<SimulationInner>
+        inner: Option<SimulationRequest>
     }
 }
 
 impl<Sim> Simulation<Sim> {
     /// Creates a new simulation.
-    fn new(sim: Sim, inner: SimulationInner) -> Self {
+    fn new(sim: Sim, inner: SimulationRequest) -> Self {
         Self { sim, inner: Some(inner) }
     }
 }
@@ -238,7 +406,7 @@ impl<Sim> Future for Simulation<Sim>
 where
     Sim: Future,
 {
-    type Output = (Sim::Output, SimulationInner);
+    type Output = (Sim::Output, SimulationRequest);
 
     fn poll(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
         let this = self.project();
@@ -246,15 +414,6 @@ where
         let inner = this.inner.take().expect("Simulation polled after completion");
         Poll::Ready((out, inner))
     }
-}
-
-#[derive(Debug)]
-struct SimulationInner {
-    retries: usize,
-    /// The request object that was used for simulation.
-    request: SendBundleRequest,
-    /// The overrides that were used for simulation.
-    overrides: SimBundleOverrides,
 }
 
 /// Error thrown when adding a simulation fails.
@@ -268,11 +427,11 @@ pub enum AddSimulationError {
 /// Message type passed to [BundleSimulatorService].
 enum BundleSimulatorMessage {
     /// Clear all ongoing jobs.
-    ClearJobs { res: oneshot::Sender<()> },
+    ClearQueue,
     /// Set current block number
     UpdateBlockNumber(u64),
     /// Add a new simulation job
-    AddSimulation { request: SimulationRequest, tx: oneshot::Sender<()> },
+    AddSimulation { request: SimulationRequest, tx: oneshot::Sender<Result<(), AddSimulationErr>> },
     /// Queues in a new event listener.
     AddEventListener(mpsc::UnboundedSender<SimulationEvent>),
 }
@@ -282,6 +441,22 @@ enum BundleSimulatorMessage {
 pub enum SimulationEvent {
     /// Result of a simulated bundle.
     SimulatedBundle(Result<SimulatedBundle, SimulatedBundleError>),
+    /// A request has been dropped because it's max number exceeds the next block
+    OutdatedRequest {
+        /// The request object that was used for simulation.
+        request: SendBundleRequest,
+        /// The overrides that were used for simulation.
+        overrides: SimBundleOverrides,
+        /// Currently tracked next block
+        next_block: u64,
+    },
+    /// A request has been dropped because it's max number of retries has been exceeded.
+    ExceededMaxRetries {
+        /// The request object that was used for simulation.
+        request: SendBundleRequest,
+        /// The overrides that were used for simulation.
+        overrides: SimBundleOverrides,
+    },
     /// Updated block number
     BlockNumberUpdated {
         /// replaced block number.
@@ -346,7 +521,7 @@ pub struct SimulatedBundleError {
 #[derive(Debug)]
 struct SimulatedBundleErrorInner {
     error: Box<dyn Error + Send + Sync>,
-    sim: SimulationInner,
+    sim: SimulationRequest,
 }
 
 /// How to queue in a simulation.
@@ -359,11 +534,59 @@ pub enum SimulationPriority {
     High,
 }
 
+impl SimulationPriority {
+    /// Returns whether the priority is high.
+    pub fn is_high(&self) -> bool {
+        matches!(self, Self::High)
+    }
+
+    /// Returns whether the priority is normal.
+    pub fn is_normal(&self) -> bool {
+        matches!(self, Self::Normal)
+    }
+}
+
+#[derive(Debug)]
 struct SimulationRequest {
+    /// How often this has been retried
+    retries: usize,
     /// The request object that was used for simulation.
     request: SendBundleRequest,
     /// The overrides that were used for simulation.
     overrides: SimBundleOverrides,
     /// The priority of the simulation.
     priority: SimulationPriority,
+    /// The timestamp when the request can be resent again.
+    backed_off_until: Option<Instant>,
+}
+
+impl SimulationRequest {
+    fn is_min_block(&self, block: u64) -> bool {
+        block > self.request.inclusion.block_number()
+    }
+
+    fn is_ready_at(&self, now: Instant) -> bool {
+        self.backed_off_until.map_or(true, |backoff| now > backoff)
+    }
+
+    fn exceeds_target_block(&self, block: u64) -> bool {
+        self.request.inclusion.max_block_number().map(|target| block > target).unwrap_or_default()
+    }
+}
+
+/// Errors that can occur when adding a simulation job.
+#[derive(Debug, thiserror::Error)]
+pub enum AddSimulationErr {
+    /// Thrown when the queue is full
+    #[error("queue full")]
+    QueueFull,
+    /// Thrown when the service is unavailable (dropped).
+    #[error("simulation service unavailable")]
+    ServiceUnavailable,
+}
+
+impl<T> From<mpsc::error::SendError<T>> for AddSimulationErr {
+    fn from(_: mpsc::error::SendError<T>) -> Self {
+        Self::ServiceUnavailable
+    }
 }

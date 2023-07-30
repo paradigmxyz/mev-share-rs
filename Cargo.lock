@@ -674,6 +674,7 @@ dependencies = [
  "futures-util",
  "hyper",
  "jsonrpsee",
+ "mev-share-backend",
  "mev-share-rpc-api",
  "mev-share-sse",
  "tokio",
@@ -1490,7 +1491,7 @@ dependencies = [
 
 [[package]]
 name = "mev-share-backend"
-version = "0.1.0"
+version = "0.1.4"
 dependencies = [
  "futures-util",
  "mev-share-rpc-api",
