@@ -12,9 +12,10 @@ use std::{
 
 use crate::simulation::{BundleSimulationOutcome, BundleSimulator, SimulatedBundle};
 use futures_util::{stream::FuturesUnordered, Stream, StreamExt};
-use mev_share_rpc_api::{SendBundleRequest, SimBundleOverrides};
+use mev_share_rpc_api::{jsonrpsee, SendBundleRequest, SimBundleOverrides};
 use pin_project_lite::pin_project;
 use tokio::sync::{mpsc, oneshot};
+use tracing::debug;
 
 /// Frontend type that can communicate with [BundleSimulatorService].
 #[derive(Debug, Clone)]
@@ -97,7 +98,7 @@ impl BundleSimulatorHandle {
     }
 
     /// Returns a new listener for simulation events.
-    pub fn simulation_event_listener(&self) -> SimulationEventStream {
+    pub fn events(&self) -> SimulationEventStream {
         let (tx, rx) = mpsc::unbounded_channel();
         let _ = self.to_service.send(BundleSimulatorMessage::AddEventListener(tx));
         SimulationEventStream { inner: rx }
@@ -195,11 +196,11 @@ impl<Sim: BundleSimulator> BundleSimulatorService<Sim> {
                 });
 
             if let Some(mut pos) = pos {
-                let item = if pos > self.high_priority_queue.len() {
+                let item = if pos < self.high_priority_queue.len() {
+                    self.high_priority_queue.remove(pos)
+                } else {
                     pos -= self.high_priority_queue.len();
                     self.normal_priority_queue.remove(pos)
-                } else {
-                    self.high_priority_queue.remove(pos)
                 };
 
                 if outdated {
@@ -243,6 +244,7 @@ impl<Sim: BundleSimulator> BundleSimulatorService<Sim> {
 
     /// Processes a new message from the handle.
     fn on_message(&mut self, msg: BundleSimulatorMessage) {
+        debug!("Received message: {:?}", msg);
         match msg {
             BundleSimulatorMessage::UpdateBlockNumber(num) => {
                 let current_block_number = self.current_block_number();
@@ -288,6 +290,7 @@ impl<Sim: BundleSimulator> BundleSimulatorService<Sim> {
         outcome: BundleSimulationOutcome,
         mut sim: SimulationRequest,
     ) {
+        debug!("Received simulation outcome: {:?}", outcome);
         match outcome {
             BundleSimulationOutcome::Success(resp) => {
                 let SimulationRequest { retries, request, overrides, .. } = sim;
@@ -351,6 +354,7 @@ where
                 let sim =
                     this.simulator.simulate_bundle(req.request.clone(), req.overrides.clone());
                 let sim = Simulation::new(sim, req);
+                debug!("Starting new simulation");
                 this.simulations.push(sim);
             }
 
@@ -426,6 +430,7 @@ pub enum AddSimulationError {
 }
 
 /// Message type passed to [BundleSimulatorService].
+#[derive(Debug)]
 enum BundleSimulatorMessage {
     /// Clear all ongoing jobs.
     ClearQueue,
@@ -530,6 +535,11 @@ impl SimulatedBundleError {
             Ok(res) => res.sim,
             Err(inner) => inner.sim.clone(),
         }
+    }
+
+    /// Attempts to downcast the error to a jsonrpsee error.
+    pub fn as_rpc_error(&self) -> Option<&jsonrpsee::core::Error> {
+        self.inner.error.downcast_ref()
     }
 }
 

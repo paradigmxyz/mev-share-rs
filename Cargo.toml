@@ -31,6 +31,7 @@ mev-share-rpc-api = { version = "0.1.4", path = "crates/mev-share-rpc-api" }
 ## eth
 ethers-core = { version = "2.0", default-features = false }
 ethers-signers = "2.0"
+ethers-providers = "2.0"
 
 ## net
 http = "0.2.9"

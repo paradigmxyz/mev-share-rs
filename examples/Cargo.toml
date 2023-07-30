@@ -17,6 +17,7 @@ tower.workspace = true
 
 ## eth 
 ethers-core.workspace = true
+ethers-providers.workspace = true
 ethers-signers.workspace = true
 
 ## server

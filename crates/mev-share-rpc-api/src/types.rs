@@ -39,6 +39,11 @@ pub struct Inclusion {
 }
 
 impl Inclusion {
+    /// Creates a new inclusion with the given min block..
+    pub fn at_block(block: u64) -> Self {
+        Self { block: U64::from(block), max_block: None }
+    }
+
     /// Returns the block number of the first block the bundle is valid for.
     #[inline]
     pub fn block_number(&self) -> u64 {
