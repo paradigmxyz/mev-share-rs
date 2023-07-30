@@ -2,6 +2,7 @@
 
 use std::{
     error::Error,
+    fmt,
     future::Future,
     pin::Pin,
     sync::{atomic::AtomicU64, Arc},
@@ -345,7 +346,7 @@ where
 
             // try to queue in a new simulation request
             let ready = this.pop_best_requests(Instant::now());
-            let no_more_work = !ready.is_empty();
+            let no_more_work = ready.is_empty();
             for req in ready {
                 let sim =
                     this.simulator.simulate_bundle(req.request.clone(), req.overrides.clone());
@@ -514,8 +515,34 @@ impl Stream for SimulationResultStream {
 /// Failed to simulate a bundle.
 #[derive(Debug, Clone)]
 pub struct SimulatedBundleError {
-    // TODO: more error cases? enum?
     inner: Arc<SimulatedBundleErrorInner>,
+}
+
+impl SimulatedBundleError {
+    /// Returns the simulation request that failed.
+    pub fn request(&self) -> &SimulationRequest {
+        &self.inner.sim
+    }
+
+    /// Consumes the type and returns the simulation request that failed.
+    pub fn into_request(self) -> SimulationRequest {
+        match Arc::try_unwrap(self.inner) {
+            Ok(res) => res.sim,
+            Err(inner) => inner.sim.clone(),
+        }
+    }
+}
+
+impl fmt::Display for SimulatedBundleError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.inner.error.fmt(f)
+    }
+}
+
+impl Error for SimulatedBundleError {
+    fn source(&self) -> Option<&(dyn Error + 'static)> {
+        Some(&*self.inner.error)
+    }
 }
 
 #[derive(Debug)]
@@ -546,18 +573,19 @@ impl SimulationPriority {
     }
 }
 
-#[derive(Debug)]
-struct SimulationRequest {
+/// A request to simulate a bundle.
+#[derive(Debug, Clone)]
+pub struct SimulationRequest {
     /// How often this has been retried
-    retries: usize,
+    pub retries: usize,
     /// The request object that was used for simulation.
-    request: SendBundleRequest,
+    pub request: SendBundleRequest,
     /// The overrides that were used for simulation.
-    overrides: SimBundleOverrides,
+    pub overrides: SimBundleOverrides,
     /// The priority of the simulation.
-    priority: SimulationPriority,
+    pub priority: SimulationPriority,
     /// The timestamp when the request can be resent again.
-    backed_off_until: Option<Instant>,
+    pub backed_off_until: Option<Instant>,
 }
 
 impl SimulationRequest {
