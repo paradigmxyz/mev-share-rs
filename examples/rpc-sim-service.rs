@@ -36,7 +36,7 @@ async fn main() {
     let sim = tokio::task::spawn(sim);
 
     handle
-        .add_bundle_simulation(
+        .add_bundle_simulation_with_prio(
             SendBundleRequest {
                 protocol_version: Default::default(),
                 inclusion: Inclusion::at_block(current_block - 1),

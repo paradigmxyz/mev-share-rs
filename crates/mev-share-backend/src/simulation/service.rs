@@ -50,10 +50,31 @@ impl BundleSimulatorHandle {
         self.to_service.send(BundleSimulatorMessage::ClearQueue).ok();
     }
 
-    /// Adds a new bundle simulation to the queue.
+    /// Adds a new bundle simulation to the queue with [SimulationPriority::High].
+    ///
+    /// Returns an error when the service failed to queue in the simulation.
+    pub fn send_bundle_simulation_high_prio(
+        &self,
+        request: SendBundleRequest,
+        overrides: SimBundleOverrides,
+    ) -> Result<(), AddSimulationErr> {
+        self.send_bundle_simulation_with_prio(request, overrides, SimulationPriority::High)
+    }
+    /// Adds a new bundle simulation to the queue with [SimulationPriority::Normal].
     ///
     /// Returns an error when the service failed to queue in the simulation.
     pub fn send_bundle_simulation(
+        &self,
+        request: SendBundleRequest,
+        overrides: SimBundleOverrides,
+    ) -> Result<(), AddSimulationErr> {
+        self.send_bundle_simulation_with_prio(request, overrides, SimulationPriority::Normal)
+    }
+
+    /// Adds a new bundle simulation to the queue.
+    ///
+    /// Returns an error when the service failed to queue in the simulation.
+    pub fn send_bundle_simulation_with_prio(
         &self,
         request: SendBundleRequest,
         overrides: SimBundleOverrides,
@@ -73,10 +94,32 @@ impl BundleSimulatorHandle {
         Ok(())
     }
 
-    /// Adds a new bundle simulation to the queue.
+    /// Adds a new bundle simulation to the queue with [SimulationPriority::High].
+    ///
+    /// Returns an error when the service failed to queue in the simulation.
+    pub async fn add_bundle_simulation_high_prio(
+        &self,
+        request: SendBundleRequest,
+        overrides: SimBundleOverrides,
+    ) -> Result<(), AddSimulationErr> {
+        self.add_bundle_simulation_with_prio(request, overrides, SimulationPriority::High).await
+    }
+
+    /// Adds a new bundle simulation to the queue with [SimulationPriority::Normal].
     ///
     /// Returns an error when the service failed to queue in the simulation.
     pub async fn add_bundle_simulation(
+        &self,
+        request: SendBundleRequest,
+        overrides: SimBundleOverrides,
+    ) -> Result<(), AddSimulationErr> {
+        self.add_bundle_simulation_with_prio(request, overrides, SimulationPriority::Normal).await
+    }
+
+    /// Adds a new bundle simulation to the queue.
+    ///
+    /// Returns an error when the service failed to queue in the simulation.
+    pub async fn add_bundle_simulation_with_prio(
         &self,
         request: SendBundleRequest,
         overrides: SimBundleOverrides,
