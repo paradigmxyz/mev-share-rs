@@ -49,6 +49,8 @@ pub struct EventTransactionLog {
     /// (e.g. `Deposit(address,bytes32,uint256)`), except you declared the event
     /// with the anonymous specifier.)
     pub topics: Vec<H256>,
+    /// The data of the log
+    pub data: Bytes,
 }
 
 /// SSE event type of the event history endpoint.
@@ -187,7 +189,7 @@ impl<'de> Deserialize<'de> for FunctionSelector {
             return Err(serde::de::Error::custom(format!(
                 "Expected 4 byte function selector: {}",
                 hex_str
-            )))
+            )));
         }
 
         let bytes = hex::decode(s).map_err(serde::de::Error::custom)?;
