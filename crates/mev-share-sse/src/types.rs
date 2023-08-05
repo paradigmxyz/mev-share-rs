@@ -49,6 +49,8 @@ pub struct EventTransactionLog {
     /// (e.g. `Deposit(address,bytes32,uint256)`), except you declared the event
     /// with the anonymous specifier.)
     pub topics: Vec<H256>,
+    /// The data of the log
+    pub data: Bytes,
 }
 
 /// SSE event type of the event history endpoint.
