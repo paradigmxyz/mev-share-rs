@@ -1,13 +1,15 @@
 //! MEV-share bundle type bindings
-
-use ethers_core::types::{Address, BlockId, Bytes, Log, TxHash, U64};
+#![allow(missing_docs)]
+use ethers_core::types::{Address, BlockId, BlockNumber, Bytes, Log, TxHash, H256, U256, U64};
 use serde::{
     ser::{SerializeSeq, Serializer},
     Deserialize, Deserializer, Serialize,
 };
 
 /// A bundle of transactions to send to the matchmaker.
-#[derive(Clone, Debug, Default, Serialize, Deserialize, PartialEq)]
+///
+/// Note: this is for `mev_sendBundle` and not `eth_sendBundle`.
+#[derive(Clone, Debug, Default, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct SendBundleRequest {
     /// The version of the MEV-share API to use.
@@ -28,7 +30,7 @@ pub struct SendBundleRequest {
 }
 
 /// Data used by block builders to check if the bundle should be considered for inclusion.
-#[derive(Clone, Debug, Default, Serialize, Deserialize, PartialEq)]
+#[derive(Clone, Debug, Default, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct Inclusion {
     /// The first block the bundle is valid for.
@@ -39,7 +41,7 @@ pub struct Inclusion {
 }
 
 /// A bundle tx, which can either be a transaction hash, or a full tx.
-#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(untagged)]
 #[serde(rename_all = "camelCase")]
 pub enum BundleItem {
@@ -59,7 +61,7 @@ pub enum BundleItem {
 }
 
 /// Requirements for the bundle to be included in the block.
-#[derive(Clone, Debug, Default, Serialize, Deserialize, PartialEq)]
+#[derive(Clone, Debug, Default, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct Validity {
     /// Specifies the minimum percent of a given bundle's earnings to redistribute
@@ -74,7 +76,7 @@ pub struct Validity {
 
 /// Specifies the minimum percent of a given bundle's earnings to redistribute
 /// for it to be included in a builder's block.
-#[derive(Clone, Debug, Default, Serialize, Deserialize, PartialEq)]
+#[derive(Clone, Debug, Default, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct Refund {
     /// The index of the transaction in the bundle.
@@ -85,7 +87,7 @@ pub struct Refund {
 
 /// Specifies what addresses should receive what percent of the overall refund for this bundle,
 /// if it is enveloped by another bundle (eg. a searcher backrun).
-#[derive(Clone, Debug, Default, Serialize, Deserialize, PartialEq)]
+#[derive(Clone, Debug, Default, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct RefundConfig {
     /// The address to refund.
@@ -95,19 +97,19 @@ pub struct RefundConfig {
 }
 
 /// Preferences on what data should be shared about the bundle and its transactions
-#[derive(Clone, Debug, Default, Serialize, Deserialize, PartialEq)]
+#[derive(Clone, Debug, Default, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct Privacy {
     /// Hints on what data should be shared about the bundle and its transactions
     #[serde(skip_serializing_if = "Option::is_none")]
     pub hints: Option<PrivacyHint>,
-    /// The addresses of the builders that should be allowed to see the bundle.
+    /// The addresses of the builders that should be allowed to see the bundle/transaction.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub builders: Option<Vec<Address>>,
 }
 
 /// Hints on what data should be shared about the bundle and its transactions
-#[derive(Clone, Debug, PartialEq, Default)]
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct PrivacyHint {
     /// The calldata of the bundle's transactions should be shared.
     pub calldata: bool,
@@ -123,7 +125,6 @@ pub struct PrivacyHint {
     pub tx_hash: bool,
 }
 
-#[allow(missing_docs)]
 impl PrivacyHint {
     pub fn with_calldata(mut self) -> Self {
         self.calldata = true;
@@ -248,15 +249,15 @@ impl<'de> Deserialize<'de> for PrivacyHint {
 }
 
 /// Response from the matchmaker after sending a bundle.
-#[derive(Deserialize, Debug, Serialize, Clone, PartialEq)]
+#[derive(Deserialize, Debug, Serialize, Clone, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct SendBundleResponse {
     /// Hash of the bundle bodies.
-    bundle_hash: TxHash,
+    pub bundle_hash: H256,
 }
 
 /// The version of the MEV-share API to use.
-#[derive(Deserialize, Debug, Serialize, Clone, Default, PartialEq)]
+#[derive(Deserialize, Debug, Serialize, Clone, Default, PartialEq, Eq)]
 pub enum ProtocolVersion {
     #[default]
     #[serde(rename = "beta-1")]
@@ -268,7 +269,7 @@ pub enum ProtocolVersion {
 }
 
 /// Optional fields to override simulation state.
-#[derive(Deserialize, Debug, Serialize, Clone, Default, PartialEq)]
+#[derive(Deserialize, Debug, Serialize, Clone, Default, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct SimBundleOverrides {
     /// Block used for simulation state. Defaults to latest block.
@@ -297,7 +298,7 @@ pub struct SimBundleOverrides {
 }
 
 /// Response from the matchmaker after sending a simulation request.
-#[derive(Deserialize, Debug, Serialize, Clone, PartialEq)]
+#[derive(Deserialize, Debug, Serialize, Clone, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct SimBundleResponse {
     /// Whether the simulation was successful.
@@ -321,7 +322,7 @@ pub struct SimBundleResponse {
 }
 
 /// Logs returned by mev_simBundle.
-#[derive(Deserialize, Debug, Serialize, Clone, PartialEq)]
+#[derive(Deserialize, Debug, Serialize, Clone, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct SimBundleLogs {
     /// Logs for transactions in bundle.
@@ -350,16 +351,206 @@ impl SendBundleRequest {
     }
 }
 
+/// Request for `eth_cancelBundle`
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct CancelBundleRequest {
+    /// Bundle hash of the bundle to be canceled
+    pub bundle_hash: String,
+}
+
+/// Request for `eth_sendPrivateTransaction`
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct PrivateTransactionRequest {
+    /// raw signed transaction
+    pub tx: Bytes,
+    /// Hex-encoded number string, optional. Highest block number in which the transaction should
+    /// be included.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub max_block_number: Option<U64>,
+    #[serde(default, skip_serializing_if = "PrivateTransactionPreferences::is_empty")]
+    pub preferences: PrivateTransactionPreferences,
+}
+
+/// Additional preferences for `eth_sendPrivateTransaction`
+#[derive(Serialize, Deserialize, Default, Debug, Clone, PartialEq, Eq)]
+pub struct PrivateTransactionPreferences {
+    /// Requirements for the bundle to be included in the block.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub validity: Option<Validity>,
+    /// Preferences on what data should be shared about the bundle and its transactions
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub privacy: Option<Privacy>,
+}
+
+impl PrivateTransactionPreferences {
+    /// Returns true if the preferences are empty.
+    pub fn is_empty(&self) -> bool {
+        self.validity.is_none() && self.privacy.is_none()
+    }
+}
+
+/// Request for `eth_cancelPrivateTransaction`
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct CancelPrivateTransactionRequest {
+    /// Transaction hash of the transaction to be canceled
+    pub tx_hash: H256,
+}
+
+/// Response for `flashbots_getBundleStatsV2` represents stats for a single bundle
+///
+/// Note: this is V2: <https://docs.flashbots.net/flashbots-auction/searchers/advanced/rpc-endpoint#flashbots_getbundlestatsv2>
+///
+/// Timestamp format: "2022-10-06T21:36:06.322Z"
+#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct UserStatsV2 {
+    /// boolean representing if this searcher has a high enough reputation to be in the high
+    /// priority queue
+    pub is_high_priority: bool,
+    /// representing whether the bundle gets simulated. All other fields will be omitted except
+    /// simulated field if API didn't receive bundle
+    pub is_simulated: bool,
+    /// time at which the bundle gets simulated
+    pub simulated_at: String,
+    /// time at which the bundle API received the bundle
+    pub received_at: String,
+    /// indicates time at which each builder selected the bundle to be included in the target block
+    pub considered_by_builders_at: Vec<ConsideredByBuildersAt>,
+    /// indicates time at which each builder sealed a block containing the bundle
+    pub sealed_by_builders_at: Vec<SealedByBuildersAt>,
+}
+
+#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ConsideredByBuildersAt {
+    pub pubkey: String,
+    pub timestamp: String,
+}
+
+#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SealedByBuildersAt {
+    pub pubkey: String,
+    pub timestamp: String,
+}
+
+/// Bundle of transactions for `eth_sendBundle`
+///
+/// Note: this is for `mev_sendBundle` and not `eth_sendBundle`
+///
+/// <https://docs.flashbots.net/flashbots-auction/searchers/advanced/rpc-endpoint#eth_sendbundle>
+#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct EthSendBundle {
+    /// A list of hex-encoded signed transactions
+    pub txs: Vec<Bytes>,
+    /// hex-encoded block number for which this bundle is valid
+    pub block_number: U64,
+    /// unix timestamp when this bundle becomes active
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub min_timestamp: Option<u64>,
+    /// unix timestamp how long this bundle stays valid
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub max_timestamp: Option<u64>,
+    /// list of hashes of possibly reverting txs
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub reverting_tx_hashes: Vec<H256>,
+    /// UUID that can be used to cancel/replace this bundle
+    #[serde(rename = "replacementUuid", skip_serializing_if = "Option::is_none")]
+    pub replacement_uuid: Option<String>,
+}
+
+/// Response from the matchmaker after sending a bundle.
+#[derive(Deserialize, Debug, Serialize, Clone, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct EthBundleHash {
+    /// Hash of the bundle bodies.
+    pub bundle_hash: H256,
+}
+
+/// Bundle of transactions for `eth_callBundle`
+///
+/// <https://docs.flashbots.net/flashbots-auction/searchers/advanced/rpc-endpoint#eth_callBundle>
+#[derive(Default, Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct EthCallBundle {
+    /// A list of hex-encoded signed transactions
+    pub txs: Vec<Bytes>,
+    /// hex encoded block number for which this bundle is valid on
+    pub block_number: U64,
+    /// Either a hex encoded number or a block tag for which state to base this simulation on
+    pub state_block_number: BlockNumber,
+    /// the timestamp to use for this bundle simulation, in seconds since the unix epoch
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub timestamp: Option<u64>,
+}
+
+/// Response for `eth_callBundle`
+#[derive(Default, Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct EthCallBundleResponse {
+    #[serde(with = "u256_numeric_string")]
+    pub bundle_gas_price: U256,
+    pub bundle_hash: String,
+    #[serde(with = "u256_numeric_string")]
+    pub coinbase_diff: U256,
+    #[serde(with = "u256_numeric_string")]
+    pub eth_sent_to_coinbase: U256,
+    #[serde(with = "u256_numeric_string")]
+    pub gas_fees: U256,
+    pub results: Vec<EthCallBundleTransactionResult>,
+    pub state_block_number: u64,
+    pub total_gas_used: u64,
+}
+
+/// Result of a single transaction in a bundle for `eth_callBundle`
+#[derive(Default, Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct EthCallBundleTransactionResult {
+    #[serde(with = "u256_numeric_string")]
+    pub coinbase_diff: U256,
+    #[serde(with = "u256_numeric_string")]
+    pub eth_sent_to_coinbase: U256,
+    pub from_address: Address,
+    #[serde(with = "u256_numeric_string")]
+    pub gas_fees: U256,
+    #[serde(with = "u256_numeric_string")]
+    pub gas_price: U256,
+    pub gas_used: u64,
+    pub to_address: Address,
+    pub tx_hash: H256,
+    pub value: Bytes,
+}
+
+mod u256_numeric_string {
+    use ethers_core::types::{serde_helpers::StringifiedNumeric, U256};
+    use serde::{de, Deserialize, Serializer};
+
+    pub(crate) fn deserialize<'de, D>(deserializer: D) -> Result<U256, D::Error>
+    where
+        D: de::Deserializer<'de>,
+    {
+        let num = StringifiedNumeric::deserialize(deserializer)?;
+        num.try_into().map_err(de::Error::custom)
+    }
+
+    pub(crate) fn serialize<S>(val: &U256, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        let val: u128 = (*val).try_into().map_err(serde::ser::Error::custom)?;
+        serializer.serialize_str(&val.to_string())
+    }
+}
+
 #[cfg(test)]
 mod tests {
-    use std::str::FromStr;
-
+    use super::*;
     use ethers_core::types::Bytes;
-
-    use crate::{
-        types::{ProtocolVersion, SendBundleRequest},
-        BundleItem, Inclusion, Privacy, PrivacyHint, RefundConfig, SimBundleResponse, Validity,
-    };
+    use std::str::FromStr;
 
     #[test]
     fn can_deserialize_simple() {
@@ -512,5 +703,44 @@ mod tests {
         "#;
         let actual: SimBundleResponse = serde_json::from_str(expected).unwrap();
         assert!(actual.success);
+    }
+
+    #[test]
+    fn can_deserialize_eth_call_resp() {
+        let s = r#"{
+    "bundleGasPrice": "476190476193",
+    "bundleHash": "0x73b1e258c7a42fd0230b2fd05529c5d4b6fcb66c227783f8bece8aeacdd1db2e",
+    "coinbaseDiff": "20000000000126000",
+    "ethSentToCoinbase": "20000000000000000",
+    "gasFees": "126000",
+    "results": [
+      {
+        "coinbaseDiff": "10000000000063000",
+        "ethSentToCoinbase": "10000000000000000",
+        "fromAddress": "0x02A727155aeF8609c9f7F2179b2a1f560B39F5A0",
+        "gasFees": "63000",
+        "gasPrice": "476190476193",
+        "gasUsed": 21000,
+        "toAddress": "0x73625f59CAdc5009Cb458B751b3E7b6b48C06f2C",
+        "txHash": "0x669b4704a7d993a946cdd6e2f95233f308ce0c4649d2e04944e8299efcaa098a",
+        "value": "0x"
+      },
+      {
+        "coinbaseDiff": "10000000000063000",
+        "ethSentToCoinbase": "10000000000000000",
+        "fromAddress": "0x02A727155aeF8609c9f7F2179b2a1f560B39F5A0",
+        "gasFees": "63000",
+        "gasPrice": "476190476193",
+        "gasUsed": 21000,
+        "toAddress": "0x73625f59CAdc5009Cb458B751b3E7b6b48C06f2C",
+        "txHash": "0xa839ee83465657cac01adc1d50d96c1b586ed498120a84a64749c0034b4f19fa",
+        "value": "0x"
+      }
+    ],
+    "stateBlockNumber": 5221585,
+    "totalGasUsed": 42000
+  }"#;
+
+        let _call = serde_json::from_str::<EthCallBundleResponse>(s).unwrap();
     }
 }
