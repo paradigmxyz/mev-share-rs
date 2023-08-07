@@ -31,6 +31,10 @@ pub mod servers {
     pub use crate::{eth::EthBundleApiServer, mev::MevApiServer};
 }
 
+/// re-export jsonrpsee for convenience
+#[cfg(feature = "client")]
+pub use jsonrpsee;
+
 /// re-export of all client traits
 #[cfg(feature = "client")]
 pub use clients::*;

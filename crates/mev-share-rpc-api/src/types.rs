@@ -40,6 +40,25 @@ pub struct Inclusion {
     pub max_block: Option<U64>,
 }
 
+impl Inclusion {
+    /// Creates a new inclusion with the given min block..
+    pub fn at_block(block: u64) -> Self {
+        Self { block: U64::from(block), max_block: None }
+    }
+
+    /// Returns the block number of the first block the bundle is valid for.
+    #[inline]
+    pub fn block_number(&self) -> u64 {
+        self.block.as_u64()
+    }
+
+    /// Returns the block number of the last block the bundle is valid for.
+    #[inline]
+    pub fn max_block_number(&self) -> Option<u64> {
+        self.max_block.as_ref().map(|b| b.as_u64())
+    }
+}
+
 /// A bundle tx, which can either be a transaction hash, or a full tx.
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(untagged)]

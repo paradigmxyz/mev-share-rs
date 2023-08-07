@@ -1,0 +1,25 @@
+[package]
+name = "mev-share-backend"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+homepage.workspace = true
+repository.workspace = true
+description = """
+MEV-share backend support
+"""
+
+[dependencies]
+## eth
+mev-share-rpc-api = { path = "../mev-share-rpc-api", features = ["client"] }
+
+## async
+pin-project-lite = "0.2"
+tokio = { workspace = true, features = ["sync"] }
+futures-util.workspace = true
+
+## misc
+thiserror.workspace = true
+tracing.workspace = true

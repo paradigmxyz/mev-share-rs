@@ -7,15 +7,17 @@ edition = "2021"
 [dependencies]
 mev-share-sse = { path = "../crates/mev-share-sse" }
 mev-share-rpc-api = { path = "../crates/mev-share-rpc-api", features = ["client", "server"] }
+mev-share-backend = { path = "../crates/mev-share-backend" }
 
 ## async
-tokio = { version = "1", features = ["macros", "rt", "rt-multi-thread"] }
+tokio = { workspace = true, features = ["macros", "rt", "rt-multi-thread"] }
 futures-util.workspace = true
 jsonrpsee = { version = "0.18", features = ["client", "async-client"] }
 tower.workspace = true
 
 ## eth 
 ethers-core.workspace = true
+ethers-providers.workspace = true
 ethers-signers.workspace = true
 
 ## server
@@ -36,3 +38,7 @@ path = "sse-server.rs"
 [[example]]
 name = "rpc-client"
 path = "rpc-client.rs"
+
+[[example]]
+name = "rpc-sim-service"
+path = "rpc-sim-service.rs"

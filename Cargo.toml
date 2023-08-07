@@ -1,5 +1,6 @@
 [workspace]
 members = [
+    "crates/mev-share-backend",
     "crates/mev-share-sse",
     "crates/mev-share-rpc-api",
     "crates/mev-share",
@@ -30,6 +31,7 @@ mev-share-rpc-api = { version = "0.1.4", path = "crates/mev-share-rpc-api" }
 ## eth
 ethers-core = { version = "2.0", default-features = false }
 ethers-signers = "2.0"
+ethers-providers = "2.0"
 
 ## net
 http = "0.2.9"
@@ -38,9 +40,11 @@ hyper = "0.14"
 
 ## async
 futures-util = "0.3"
+tokio = "1"
 async-trait = "0.1"
 
 ## misc
 serde_json = "1.0"
 serde = { version = "1.0", features = ["derive"] }
 tracing = "0.1"
+thiserror = "1.0"

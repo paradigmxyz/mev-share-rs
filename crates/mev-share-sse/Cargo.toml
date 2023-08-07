@@ -30,9 +30,9 @@ thiserror = "1.0"
 http.workspace = true
 serde.workspace = true
 serde_json.workspace = true
-tokio = { version = "1", features = ["time"] }
+tokio = { workspace = true, features = ["time"] }
 tracing.workspace = true
 
 [dev-dependencies]
-tokio = { version = "1", features = ["macros", "rt", "rt-multi-thread"] }
+tokio = { workspace = true, features = ["macros", "rt", "rt-multi-thread"] }
 tracing-subscriber = { version = "0.3", default-features = false, features = ["env-filter", "fmt"] }
