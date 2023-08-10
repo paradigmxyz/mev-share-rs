@@ -458,7 +458,7 @@ pub struct SealedByBuildersAt {
 
 /// Bundle of transactions for `eth_sendBundle`
 ///
-/// Note: this is for `mev_sendBundle` and not `eth_sendBundle`
+/// Note: this is for `eth_sendBundle` and not `mev_sendBundle`
 ///
 /// <https://docs.flashbots.net/flashbots-auction/searchers/advanced/rpc-endpoint#eth_sendbundle>
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
