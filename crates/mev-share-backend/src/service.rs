@@ -10,7 +10,7 @@ use std::{
     time::Instant,
 };
 
-use crate::simulation::{BundleSimulationOutcome, BundleSimulator, SimulatedBundle};
+use crate::{BundleSimulationOutcome, BundleSimulator, SimulatedBundle};
 use futures_util::{stream::FuturesUnordered, Stream, StreamExt};
 use mev_share_rpc_api::{jsonrpsee, SendBundleRequest, SimBundleOverrides};
 use pin_project_lite::pin_project;

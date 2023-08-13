@@ -8,7 +8,7 @@ use tracing_subscriber::{fmt, prelude::*, EnvFilter};
 
 use ethers_providers::Middleware;
 
-use mev_share_backend::simulation::{BundleSimulatorService, RpcSimulator};
+use mev_share_backend::{BundleSimulatorService, RpcSimulator};
 
 #[tokio::main]
 async fn main() {
