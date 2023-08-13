@@ -1,6 +1,6 @@
 //! RPC simulator implementation.
 
-use crate::simulation::{BundleSimulationOutcome, BundleSimulator};
+use crate::{BundleSimulationOutcome, BundleSimulator};
 use mev_share_rpc_api::{clients::MevApiClient, jsonrpsee, SendBundleRequest, SimBundleOverrides};
 use std::{fmt, fmt::Formatter, future::Future, pin::Pin, sync::Arc};
 
