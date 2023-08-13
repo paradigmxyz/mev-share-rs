@@ -37,6 +37,7 @@ ethers-providers = "2.0"
 http = "0.2.9"
 tower = "0.4"
 hyper = "0.14"
+jsonrpsee = "0.20"
 
 ## async
 futures-util = "0.3"
