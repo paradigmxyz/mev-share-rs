@@ -19,6 +19,7 @@ ethers-signers.workspace = true
 ## misc
 jsonrpsee = { workspace = true, features = ["server", "macros"] }
 serde.workspace = true
+serde_json.workspace = true
 http.workspace = true
 hyper = { workspace = true, features = ["stream"] }
 tower.workspace = true
