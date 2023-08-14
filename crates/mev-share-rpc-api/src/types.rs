@@ -424,7 +424,7 @@ pub struct CancelPrivateTransactionRequest {
 /// Note: this is V2: <https://docs.flashbots.net/flashbots-auction/searchers/advanced/rpc-endpoint#flashbots_getbundlestatsv2>
 ///
 /// Timestamp format: "2022-10-06T21:36:06.322Z"
-#[derive(Default, Debug, Clone, PartialEq)]
+#[derive(Default, Debug, Clone, PartialEq, Eq)]
 pub enum BundleStats {
     /// The relayer has not yet seen the bundle.
     #[default]
@@ -471,7 +471,7 @@ impl<'de> Deserialize<'de> for BundleStats {
 /// Note: this is V2: <https://docs.flashbots.net/flashbots-auction/searchers/advanced/rpc-endpoint#flashbots_getbundlestatsv2>
 ///
 /// Timestamp format: "2022-10-06T21:36:06.322Z
-#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Default, Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct StatsSeen {
     /// boolean representing if this searcher has a high enough reputation to be in the high
@@ -489,7 +489,7 @@ pub struct StatsSeen {
 /// Note: this is V2: <https://docs.flashbots.net/flashbots-auction/searchers/advanced/rpc-endpoint#flashbots_getbundlestatsv2>
 ///
 /// Timestamp format: "2022-10-06T21:36:06.322Z
-#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Default, Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct StatsSimulated {
     /// boolean representing if this searcher has a high enough reputation to be in the high
@@ -511,14 +511,14 @@ pub struct StatsSimulated {
     pub sealed_by_builders_at: Vec<SealedByBuildersAt>,
 }
 
-#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Default, Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ConsideredByBuildersAt {
     pub pubkey: String,
     pub timestamp: String,
 }
 
-#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Default, Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct SealedByBuildersAt {
     pub pubkey: String,
@@ -528,7 +528,7 @@ pub struct SealedByBuildersAt {
 /// Response for `flashbots_getUserStatsV2` represents stats for a searcher.
 ///
 /// Note: this is V2: <https://docs.flashbots.net/flashbots-auction/searchers/advanced/rpc-endpoint#flashbots_getuserstatsv2>
-#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Default, Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct UserStats {
     /// Represents whether this searcher has a high enough reputation to be in the high priority
@@ -562,7 +562,7 @@ pub struct UserStats {
 /// Note: this is for `eth_sendBundle` and not `mev_sendBundle`
 ///
 /// <https://docs.flashbots.net/flashbots-auction/searchers/advanced/rpc-endpoint#eth_sendbundle>
-#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Default, Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct EthSendBundle {
     /// A list of hex-encoded signed transactions
