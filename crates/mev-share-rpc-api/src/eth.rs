@@ -49,12 +49,12 @@ mod rpc {
             request: CancelBundleRequest,
         ) -> jsonrpsee::core::RpcResult<()>;
 
-        /// `eth_sendPrivateTransaction` is used to send a single transaction to Flashbots. Flashbots will attempt to build a block including the transaction for the next 25 blocks. See [Private Transactions](https://docs.flashbots.net/flashbots-auction/searchers/advanced/private-transaction) for more info.
+        /// `eth_sendPrivateTransaction` is used to send a single transaction to Flashbots. Flashbots will attempt to build a block including the transaction for the next 25 blocks. See [Private Transactions](https://docs.flashbots.net/flashbots-protect/additional-documentation/eth-sendPrivateTransaction) for more info.
         #[method(name = "sendPrivateTransaction")]
         async fn send_private_transaction(
             &self,
             request: PrivateTransactionRequest,
-        ) -> jsonrpsee::core::RpcResult<bool>;
+        ) -> jsonrpsee::core::RpcResult<H256>;
 
         /// The `eth_sendPrivateRawTransaction` method can be used to send private transactions to
         /// the RPC endpoint. Private transactions are protected from frontrunning and kept
@@ -102,11 +102,11 @@ pub trait EthBundleApiClient {
         request: CancelBundleRequest,
     ) -> Result<(), jsonrpsee::core::Error>;
 
-    /// `eth_sendPrivateTransaction` is used to send a single transaction to Flashbots. Flashbots will attempt to build a block including the transaction for the next 25 blocks. See [Private Transactions](https://docs.flashbots.net/flashbots-auction/searchers/advanced/private-transaction) for more info.
+    /// `eth_sendPrivateTransaction` is used to send a single transaction to Flashbots. Flashbots will attempt to build a block including the transaction for the next 25 blocks. See [Private Transactions](https://docs.flashbots.net/flashbots-protect/additional-documentation/eth-sendPrivateTransaction) for more info.
     async fn send_private_transaction(
         &self,
         request: PrivateTransactionRequest,
-    ) -> Result<bool, jsonrpsee::core::Error>;
+    ) -> Result<H256, jsonrpsee::core::Error>;
 
     /// The `eth_sendPrivateRawTransaction` method can be used to send private transactions to the
     /// RPC endpoint. Private transactions are protected from frontrunning and kept private until
@@ -158,7 +158,7 @@ where
     async fn send_private_transaction(
         &self,
         request: PrivateTransactionRequest,
-    ) -> Result<bool, jsonrpsee::core::Error> {
+    ) -> Result<H256, jsonrpsee::core::Error> {
         rpc::EthBundleApiClient::send_private_transaction(self, request).await
     }
 
