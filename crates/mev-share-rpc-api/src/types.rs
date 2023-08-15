@@ -454,7 +454,7 @@ impl<'de> Deserialize<'de> for BundleStats {
 
         if map.get("receivedAt").is_none() {
             Ok(BundleStats::Unknown)
-        } else if map["isSimulated"] == "false" {
+        } else if map["isSimulated"] == false {
             StatsSeen::deserialize(serde_json::Value::Object(map))
                 .map(BundleStats::Seen)
                 .map_err(serde::de::Error::custom)
@@ -862,5 +862,78 @@ mod tests {
   }"#;
 
         let _call = serde_json::from_str::<EthCallBundleResponse>(s).unwrap();
+    }
+
+    #[test]
+    fn can_serialize_deserialize_bundle_stats() {
+        let fixtures = [
+            (
+                r#"{
+                    "isSimulated": false
+                }"#,
+                BundleStats::Unknown,
+            ),
+            (
+                r#"{
+                    "isHighPriority": false,
+                    "isSimulated": false,
+                    "receivedAt": "476190476193"
+                }"#,
+                BundleStats::Seen(StatsSeen {
+                    is_high_priority: false,
+                    is_simulated: false,
+                    received_at: "476190476193".to_string(),
+                }),
+            ),
+            (
+                r#"{
+                    "isHighPriority": true,
+                    "isSimulated": true,
+                    "simulatedAt": "111",
+                    "receivedAt": "222",
+                    "consideredByBuildersAt":[],
+                    "sealedByBuildersAt": [
+                        {    
+                            "pubkey": "333",
+                            "timestamp": "444"
+                        },
+                        {    
+                            "pubkey": "555",
+                            "timestamp": "666"
+                        }
+                    ]
+                }"#,
+                BundleStats::Simulated(StatsSimulated {
+                    is_high_priority: true,
+                    is_simulated: true,
+                    simulated_at: String::from("111"),
+                    received_at: String::from("222"),
+                    considered_by_builders_at: vec![],
+                    sealed_by_builders_at: vec![
+                        SealedByBuildersAt {
+                            pubkey: String::from("333"),
+                            timestamp: String::from("444"),
+                        },
+                        SealedByBuildersAt {
+                            pubkey: String::from("555"),
+                            timestamp: String::from("666"),
+                        },
+                    ],
+                }),
+            ),
+        ];
+
+        let strip_whitespaces =
+            |input: &str| input.chars().filter(|&c| !c.is_whitespace()).collect::<String>();
+
+        for (serialized, deserialized) in fixtures {
+            // Check de-serialization
+            let deserialized_expected = serde_json::from_str::<BundleStats>(serialized).unwrap();
+            assert_eq!(deserialized, deserialized_expected);
+
+            // Check serialization
+            let serialized_expected = &serde_json::to_string(&deserialized).unwrap();
+            assert_eq!(strip_whitespaces(serialized), strip_whitespaces(serialized_expected));
+        }
     }
 }
