@@ -1,7 +1,9 @@
 //! Basic RPC api example
 
 use jsonrpsee::http_client::{transport::Error as HttpError, HttpClientBuilder};
-use mev_share_rpc_api::{BundleItem, FlashbotsSignerLayer, MevApiClient, SendBundleRequest};
+use mev_share_rpc_api::{
+    BundleItem, FlashbotsApiClient, FlashbotsSignerLayer, MevApiClient, SendBundleRequest,
+};
 use tower::ServiceBuilder;
 use tracing_subscriber::{fmt, prelude::*, EnvFilter};
 
@@ -51,10 +53,20 @@ async fn main() {
     let bundle = SendBundleRequest { bundle_body, ..Default::default() };
 
     // Send bundle
-    let resp = client.send_bundle(bundle.clone()).await;
-    println!("Got a bundle response: {:?}", resp);
+    let send_res = client.send_bundle(bundle.clone()).await;
+    println!("Got a bundle response: {:?}", send_res);
 
     // Simulate bundle
     let sim_res = client.sim_bundle(bundle, Default::default()).await;
     println!("Got a simulation response: {:?}", sim_res);
+
+    // Get bundle stats
+    if let Ok(bundle) = send_res {
+        let bundle_stats = client.get_bundle_stats(bundle.bundle_hash, Default::default()).await;
+        println!("Got a `flashbots_getBundleStatsV2` response: {:?}", bundle_stats);
+    }
+
+    // Get user stats
+    let user_stats = client.get_user_stats(Default::default()).await;
+    println!("Got a `flashbots_getUserStatsV2` response: {:?}", user_stats);
 }

@@ -6,7 +6,10 @@ edition = "2021"
 
 [dependencies]
 mev-share-sse = { path = "../crates/mev-share-sse" }
-mev-share-rpc-api = { path = "../crates/mev-share-rpc-api", features = ["client", "server"] }
+mev-share-rpc-api = { path = "../crates/mev-share-rpc-api", features = [
+    "client",
+    "server",
+] }
 mev-share-backend = { path = "../crates/mev-share-backend" }
 
 ## async
@@ -19,13 +22,18 @@ tower.workspace = true
 ethers-core.workspace = true
 ethers-providers.workspace = true
 ethers-signers.workspace = true
+ethers-middleware = "2.0"
 
 ## server
 hyper = { workspace = true, features = ["full"] }
 
 ## misc
 tracing.workspace = true
-tracing-subscriber = { version = "0.3", default-features = false, features = ["env-filter", "fmt"] }
+tracing-subscriber = { version = "0.3", default-features = false, features = [
+    "env-filter",
+    "fmt",
+] }
+anyhow = "1.0"
 
 [[example]]
 name = "sse"
@@ -42,3 +50,7 @@ path = "rpc-client.rs"
 [[example]]
 name = "rpc-sim-service"
 path = "rpc-sim-service.rs"
+
+[[example]]
+name = "rpc-client-onchain"
+path = "rpc-client-onchain.rs"

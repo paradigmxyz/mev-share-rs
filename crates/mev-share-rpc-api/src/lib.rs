@@ -13,6 +13,9 @@ mod mev;
 /// `eth` namespace extension for bundles
 mod eth;
 
+/// `flashbots` namespace
+mod flashbots;
+
 /// type bindings
 mod types;
 pub use types::*;
@@ -28,7 +31,7 @@ pub use servers::*;
 #[cfg(feature = "server")]
 #[doc(hidden)]
 pub mod servers {
-    pub use crate::{eth::EthBundleApiServer, mev::MevApiServer};
+    pub use crate::{eth::EthBundleApiServer, flashbots::FlashbotsApiServer, mev::MevApiServer};
 }
 
 /// re-export jsonrpsee for convenience
@@ -46,6 +49,7 @@ pub mod clients {
     pub use crate::{
         auth::{FlashbotsSigner, FlashbotsSignerLayer},
         eth::EthBundleApiClient,
+        flashbots::FlashbotsApiClient,
         mev::MevApiClient,
     };
 }
