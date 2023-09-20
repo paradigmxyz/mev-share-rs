@@ -16,7 +16,7 @@ use hyper::Body;
 
 use tower::{Layer, Service};
 
-const FLASHBOTS_HEADER: HeaderName = HeaderName::from_static("x-flashbots-signature");
+static FLASHBOTS_HEADER: HeaderName = HeaderName::from_static("x-flashbots-signature");
 
 /// Layer that applies [`FlashbotsSigner`] which adds a request header with a signed payload.
 #[derive(Clone)]
@@ -83,7 +83,7 @@ where
             .get(http::header::CONTENT_TYPE)
             .map(|v| v == HeaderValue::from_static("application/json"))
             .unwrap_or(false);
-        let has_sig = parts.headers.contains_key(FLASHBOTS_HEADER);
+        let has_sig = parts.headers.contains_key(FLASHBOTS_HEADER.clone());
 
         if !is_json || has_sig {
             return Box::pin(async move {
@@ -104,7 +104,7 @@ where
             let header_val =
                 HeaderValue::from_str(&format!("{:?}:0x{}", signer.address(), signature))
                     .expect("Header contains invalid characters");
-            parts.headers.insert(FLASHBOTS_HEADER, header_val);
+            parts.headers.insert(FLASHBOTS_HEADER.clone(), header_val);
 
             let request = Request::from_parts(parts, Body::from(body_bytes.clone()));
             inner.call(request).await.map_err(Into::into)
