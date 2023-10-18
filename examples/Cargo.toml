@@ -5,7 +5,7 @@ publish = false
 edition = "2021"
 
 [dependencies]
-mev-share-sse = { path = "../crates/mev-share-sse" }
+mev-share-sse = { path = "../crates/mev-share-sse", features = ["server"] }
 mev-share-rpc-api = { path = "../crates/mev-share-rpc-api", features = [
     "client",
     "server",
