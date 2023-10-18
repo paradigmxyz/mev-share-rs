@@ -48,8 +48,13 @@ impl EventClient {
 
     /// Set the maximum number of retries.
     pub fn with_max_retries(mut self, max_retries: u64) -> Self {
-        self.max_retries = Some(max_retries);
+        self.set_max_retries(max_retries);
         self
+    }
+
+    /// Set the maximum number of retries.
+    pub fn set_max_retries(&mut self, max_retries: u64) {
+        self.max_retries = Some(max_retries);
     }
 
     /// Subscribe to the MEV-share SSE endpoint.
