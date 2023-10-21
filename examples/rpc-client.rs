@@ -7,10 +7,8 @@ use mev_share_rpc_api::{
 use tower::ServiceBuilder;
 use tracing_subscriber::{fmt, prelude::*, EnvFilter};
 
-use ethers_core::{
-    rand::thread_rng,
-    types::{TransactionRequest, H256},
-};
+use alloy_primitives::B256;
+use ethers_core::{rand::thread_rng, types::TransactionRequest};
 use ethers_signers::{LocalWallet, Signer};
 
 #[tokio::main]
@@ -38,7 +36,7 @@ async fn main() {
         .expect("Failed to create http client");
 
     // Hash of the transaction we are trying to backrun
-    let tx_hash = H256::random();
+    let tx_hash = B256::random();
 
     // Our own tx that we want to include in the bundle
     let tx = TransactionRequest::pay("vitalik.eth", 100);

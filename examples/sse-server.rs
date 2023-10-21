@@ -1,5 +1,5 @@
 //! SSE server example
-use ethers_core::types::H256;
+use alloy_primitives::B256;
 use futures_util::StreamExt;
 use hyper::{service::make_service_fn, Server};
 use mev_share_sse::{Event, EventClient};
@@ -45,7 +45,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync + 'static>
         }
     });
 
-    let event = Event { hash: H256::random(), transactions: vec![], logs: vec![] };
+    let event = Event { hash: B256::random(), transactions: vec![], logs: vec![] };
 
     broadcaster.send(&event).unwrap();
 

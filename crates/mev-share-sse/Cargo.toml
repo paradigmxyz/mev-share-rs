@@ -12,6 +12,7 @@ MEV-share Server Side Events support in rust
 
 [dependencies]
 ethers-core.workspace = true
+alloy-primitives = { workspace = true, features = ["serde"] }
 
 ## async
 async-sse = "5.1"

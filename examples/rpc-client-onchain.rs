@@ -1,11 +1,10 @@
 //! Basic RPC api example
 
+use alloy_primitives::{Bytes, B256, U64};
 use anyhow::Result;
 use ethers_core::{
     rand::thread_rng,
-    types::{
-        transaction::eip2718::TypedTransaction, Bytes, Chain, Eip1559TransactionRequest, H256,
-    },
+    types::{transaction::eip2718::TypedTransaction, Chain, Eip1559TransactionRequest},
 };
 use ethers_middleware::MiddlewareBuilder;
 use ethers_providers::{Middleware, Provider};
@@ -138,11 +137,11 @@ async fn main() -> Result<()> {
     tokio::time::sleep(wait_duration).await;
 
     // Get bundle stats
-    let bundle_stats = client.get_bundle_stats(H256::random(), target_block).await;
+    let bundle_stats = client.get_bundle_stats(B256::random(), target_block).await;
     println!("`flashbots_getBundleStatsV2`: {:?}", bundle_stats);
 
     // Get user stats
-    let user_stats = client.get_user_stats(current_block).await;
+    let user_stats = client.get_user_stats(U64::from(current_block.as_u64())).await;
     println!("`flashbots_getUserStatsV2`: {:?}", user_stats);
 
     Ok(())
@@ -181,6 +180,6 @@ impl TxSign for TypedTransaction {
         S::Error: 'static,
     {
         let signature = signer.sign_transaction(self).await?;
-        Ok(self.rlp_signed(&signature))
+        Ok(self.rlp_signed(&signature).0.into())
     }
 }

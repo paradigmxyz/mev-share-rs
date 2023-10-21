@@ -16,6 +16,8 @@ MEV-share RPC API trait definitions
 ethers-core.workspace = true
 ethers-signers.workspace = true
 
+alloy-primitives = {workspace = true, features = ["serde"] }
+
 ## misc
 jsonrpsee = { workspace = true, features = ["server", "macros"] }
 serde.workspace = true

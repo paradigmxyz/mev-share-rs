@@ -7,7 +7,7 @@ use std::{
     task::{Context, Poll},
 };
 
-use ethers_core::{types::H256, utils::keccak256};
+use alloy_primitives::{keccak256, B256};
 use ethers_signers::Signer;
 use futures_util::future::BoxFuture;
 
@@ -98,7 +98,7 @@ where
 
             // sign request body and insert header
             let signature = signer
-                .sign_message(format!("0x{:x}", H256::from(keccak256(body_bytes.as_ref()))))
+                .sign_message(format!("0x{:x}", B256::from(keccak256(body_bytes.as_ref()))))
                 .await?;
 
             let header_val =
@@ -159,7 +159,7 @@ mod tests {
 
         let signer_address = format!("{:?}", fb_signer.address());
         let expected_signature = fb_signer
-            .sign_message(format!("0x{:x}", H256::from(keccak256(bytes.clone()))))
+            .sign_message(format!("0x{:x}", B256::from(keccak256(bytes.clone()))))
             .await
             .unwrap()
             .to_string();

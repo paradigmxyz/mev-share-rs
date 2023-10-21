@@ -2,7 +2,7 @@ use crate::{
     CancelBundleRequest, CancelPrivateTransactionRequest, EthBundleHash, EthCallBundleResponse,
     EthCallBundleTransactionResult, EthSendBundle, PrivateTransactionRequest,
 };
-use ethers_core::types::{Bytes, H256};
+use alloy_primitives::{Bytes, B256};
 
 // re-export the rpc server trait
 #[cfg(feature = "server")]
@@ -16,7 +16,7 @@ mod rpc {
         CancelBundleRequest, CancelPrivateTransactionRequest, EthBundleHash, EthCallBundleResponse,
         EthCallBundleTransactionResult, EthSendBundle, PrivateTransactionRequest,
     };
-    use ethers_core::types::{Bytes, H256};
+    use alloy_primitives::{Bytes, B256};
     use jsonrpsee::proc_macros::rpc;
 
     /// Eth bundle rpc interface.
@@ -54,7 +54,7 @@ mod rpc {
         async fn send_private_transaction(
             &self,
             request: PrivateTransactionRequest,
-        ) -> jsonrpsee::core::RpcResult<H256>;
+        ) -> jsonrpsee::core::RpcResult<B256>;
 
         /// The `eth_sendPrivateRawTransaction` method can be used to send private transactions to
         /// the RPC endpoint. Private transactions are protected from frontrunning and kept
@@ -64,7 +64,7 @@ mod rpc {
         async fn send_private_raw_transaction(
             &self,
             bytes: Bytes,
-        ) -> jsonrpsee::core::RpcResult<H256>;
+        ) -> jsonrpsee::core::RpcResult<B256>;
 
         /// The `eth_cancelPrivateTransaction` method stops private transactions from being
         /// submitted for future blocks.
@@ -106,7 +106,7 @@ pub trait EthBundleApiClient {
     async fn send_private_transaction(
         &self,
         request: PrivateTransactionRequest,
-    ) -> Result<H256, jsonrpsee::core::Error>;
+    ) -> Result<B256, jsonrpsee::core::Error>;
 
     /// The `eth_sendPrivateRawTransaction` method can be used to send private transactions to the
     /// RPC endpoint. Private transactions are protected from frontrunning and kept private until
@@ -115,7 +115,7 @@ pub trait EthBundleApiClient {
     async fn send_private_raw_transaction(
         &self,
         bytes: Bytes,
-    ) -> Result<H256, jsonrpsee::core::Error>;
+    ) -> Result<B256, jsonrpsee::core::Error>;
 
     /// The `eth_cancelPrivateTransaction` method stops private transactions from being submitted
     /// for future blocks.
@@ -158,14 +158,14 @@ where
     async fn send_private_transaction(
         &self,
         request: PrivateTransactionRequest,
-    ) -> Result<H256, jsonrpsee::core::Error> {
+    ) -> Result<B256, jsonrpsee::core::Error> {
         rpc::EthBundleApiClient::send_private_transaction(self, request).await
     }
 
     async fn send_private_raw_transaction(
         &self,
         bytes: Bytes,
-    ) -> Result<H256, jsonrpsee::core::Error> {
+    ) -> Result<B256, jsonrpsee::core::Error> {
         rpc::EthBundleApiClient::send_private_raw_transaction(self, bytes).await
     }
 
