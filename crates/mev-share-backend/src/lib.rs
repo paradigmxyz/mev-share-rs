@@ -60,17 +60,17 @@ impl SimulatedBundle {
 
     /// Returns the profit of the simulation.
     pub fn profit(&self) -> u64 {
-        self.response.profit.as_u64()
+        self.response.profit.to::<u64>()
     }
 
     /// Returns the gas used by the simulation.
     pub fn gas_used(&self) -> u64 {
-        self.response.gas_used.as_u64()
+        self.response.gas_used.to::<u64>()
     }
 
     /// Returns the mev gas price of the simulation.
     pub fn mev_gas_price(&self) -> u64 {
-        self.response.mev_gas_price.as_u64()
+        self.response.mev_gas_price.to::<u64>()
     }
 
     ///

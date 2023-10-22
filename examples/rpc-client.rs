@@ -44,8 +44,10 @@ async fn main() {
     let bytes = tx.rlp_signed(&signature);
 
     // Build bundle
-    let bundle_body =
-        vec![BundleItem::Hash { hash: tx_hash }, BundleItem::Tx { tx: bytes, can_revert: false }];
+    let bundle_body = vec![
+        BundleItem::Hash { hash: tx_hash },
+        BundleItem::Tx { tx: bytes.0.into(), can_revert: false },
+    ];
 
     let bundle = SendBundleRequest { bundle_body, ..Default::default() };
 

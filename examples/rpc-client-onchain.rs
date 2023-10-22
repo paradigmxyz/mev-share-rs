@@ -124,7 +124,7 @@ async fn main() -> Result<()> {
     let bundle_request = SendBundleRequest {
         protocol_version: mev_share_rpc_api::ProtocolVersion::V0_1,
         bundle_body,
-        inclusion: Inclusion { block: target_block, ..Default::default() },
+        inclusion: Inclusion { block: U64::from_limbs(target_block.0), ..Default::default() },
         ..Default::default()
     };
 
@@ -137,7 +137,8 @@ async fn main() -> Result<()> {
     tokio::time::sleep(wait_duration).await;
 
     // Get bundle stats
-    let bundle_stats = client.get_bundle_stats(B256::random(), target_block).await;
+    let bundle_stats =
+        client.get_bundle_stats(B256::random(), U64::from_limbs(target_block.0)).await;
     println!("`flashbots_getBundleStatsV2`: {:?}", bundle_stats);
 
     // Get user stats

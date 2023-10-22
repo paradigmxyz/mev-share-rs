@@ -1868,7 +1868,6 @@ dependencies = [
  "alloy-primitives",
  "async-sse",
  "bytes",
- "ethers-core",
  "futures-util",
  "http",
  "http-types",

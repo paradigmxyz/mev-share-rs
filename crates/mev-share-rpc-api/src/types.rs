@@ -647,7 +647,9 @@ pub struct EthCallBundleTransactionResult {
 }
 
 mod u256_numeric_string {
-    use ethers_core::types::{serde_helpers::StringifiedNumeric, U256};
+    use std::str::FromStr;
+
+    use alloy_primitives::{U256, U64};
     use serde::{de, Deserialize, Serializer};
 
     pub(crate) fn deserialize<'de, D>(deserializer: D) -> Result<U256, D::Error>
@@ -665,12 +667,52 @@ mod u256_numeric_string {
         let val: u128 = (*val).try_into().map_err(serde::ser::Error::custom)?;
         serializer.serialize_str(&val.to_string())
     }
+
+    /// Helper type to parse numeric strings, `u64` and `U256`
+    #[derive(Deserialize, Debug, Clone)]
+    #[serde(untagged)]
+    pub enum StringifiedNumeric {
+        String(String),
+        U256(U256),
+        Num(serde_json::Number),
+    }
+
+    impl TryFrom<StringifiedNumeric> for U256 {
+        type Error = String;
+
+        fn try_from(value: StringifiedNumeric) -> Result<Self, Self::Error> {
+            match value {
+                StringifiedNumeric::U256(n) => Ok(n),
+                StringifiedNumeric::Num(n) => {
+                    Ok(U256::from_str(&n.to_string()).map_err(|err| err.to_string())?)
+                }
+                StringifiedNumeric::String(s) => {
+                    if let Ok(val) = s.parse::<u128>() {
+                        Ok(U256::from(val))
+                    } else if s.starts_with("0x") {
+                        U256::from_str_radix(&s, 16).map_err(|err| err.to_string())
+                    } else {
+                        U256::from_str(&s).map_err(|err| err.to_string())
+                    }
+                }
+            }
+        }
+    }
+
+    impl TryFrom<StringifiedNumeric> for U64 {
+        type Error = String;
+
+        fn try_from(value: StringifiedNumeric) -> Result<Self, Self::Error> {
+            let value = U256::try_from(value)?;
+            U64::from_base_be(10, value.to_base_be(10)).map_err(|err| err.to_string())
+        }
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use ethers_core::types::Bytes;
+    use alloy_primitives::{Bytes, U64};
     use std::str::FromStr;
 
     #[test]
@@ -769,7 +811,7 @@ mod tests {
 
         let bundle = SendBundleRequest {
             protocol_version: ProtocolVersion::V0_1,
-            inclusion: Inclusion { block: 1.into(), max_block: None },
+            inclusion: Inclusion { block: U64::from(1), max_block: None },
             bundle_body,
             validity,
             privacy,
