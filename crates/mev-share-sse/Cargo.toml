@@ -1,6 +1,6 @@
 [package]
 name = "mev-share-sse"
-version.workspace = true
+version = "0.1.5"
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
