@@ -57,6 +57,11 @@ impl EventClient {
         self.max_retries = Some(max_retries);
     }
 
+    /// Returns the maximum number of retries.
+    pub fn max_retries(&self) -> Option<u64> {
+        self.max_retries
+    }
+
     /// Subscribe to the MEV-share SSE endpoint.
     ///
     /// This connects to the endpoint and returns a stream of `T` items.
