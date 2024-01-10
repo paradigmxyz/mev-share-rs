@@ -1,5 +1,5 @@
 use crate::{BundleStats, UserStats};
-use ethers_core::types::{H256, U64};
+use alloy_primitives::{B256, U64};
 
 // re-export the rpc server trait
 #[cfg(feature = "server")]
@@ -13,7 +13,7 @@ pub use rpc::FlashbotsApiServer;
 /// [jsonrpsee_proc_macros]: https://docs.rs/jsonrpsee-proc-macros/0.20.0/jsonrpsee_proc_macros/attr.rpc.html
 mod rpc {
     use crate::{BundleStats, UserStats};
-    use ethers_core::types::{H256, U64};
+    use alloy_primitives::{B256, U64};
     use jsonrpsee::proc_macros::rpc;
     use serde::{Deserialize, Serialize};
 
@@ -27,7 +27,7 @@ mod rpc {
     #[serde(rename_all = "camelCase")]
 
     pub struct GetBundleStatsRequest {
-        pub bundle_hash: H256,
+        pub bundle_hash: B256,
         pub block_number: U64,
     }
 
@@ -83,7 +83,7 @@ pub trait FlashbotsApiClient {
     /// * `block_number` - The block number the bundle was targeting. See [`crate::Inclusion`].
     async fn get_bundle_stats(
         &self,
-        bundle_hash: H256,
+        bundle_hash: B256,
         block_number: U64,
     ) -> Result<BundleStats, jsonrpsee::core::Error>;
 }
@@ -102,7 +102,7 @@ where
     /// See [`FlashbotsApiClient::get_user_stats`]
     async fn get_bundle_stats(
         &self,
-        bundle_hash: H256,
+        bundle_hash: B256,
         block_number: U64,
     ) -> Result<BundleStats, jsonrpsee::core::Error> {
         self.get_bundle_stats(rpc::GetBundleStatsRequest { bundle_hash, block_number }).await

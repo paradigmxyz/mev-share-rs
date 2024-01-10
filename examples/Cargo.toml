@@ -24,6 +24,8 @@ ethers-providers.workspace = true
 ethers-signers.workspace = true
 ethers-middleware = "2.0"
 
+alloy-primitives = { workspace = true, features = ["serde", "rand"] }
+
 ## server
 hyper = { workspace = true, features = ["full"] }
 
