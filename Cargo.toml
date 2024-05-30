@@ -6,7 +6,7 @@ members = [
     "crates/mev-share",
 
     # Internal
-    "examples"
+    "examples",
 ]
 
 # Explicitly set the resolver to version 2, which is the default for packages with edition >= 2021
@@ -20,7 +20,7 @@ rust-version = "1.70"
 authors = ["mev-share-rs devs"]
 license = "MIT OR Apache-2.0"
 homepage = "https://github.com/paradigmxyz/mev-share-rs"
-repository ="https://github.com/paradigmxyz/mev-share-rs"
+repository = "https://github.com/paradigmxyz/mev-share-rs"
 
 [workspace.dependencies]
 ## workspace crates
