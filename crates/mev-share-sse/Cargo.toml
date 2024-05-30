@@ -15,7 +15,10 @@ alloy-primitives.workspace = true
 
 ## async
 async-sse = "5.1"
-reqwest = { version = "0.11", default-features = false, features = ["stream", "json"] }
+reqwest = { version = "0.12", default-features = false, features = [
+    "stream",
+    "json",
+] }
 futures-util = { workspace = true, features = ["io"] }
 http-types = { version = "2.12", default-features = false }
 tower = { workspace = true, optional = true }
@@ -41,4 +44,7 @@ server = ["hyper", "http", "tokio-stream", "tokio-util", "tower"]
 
 [dev-dependencies]
 tokio = { workspace = true, features = ["macros", "rt", "rt-multi-thread"] }
-tracing-subscriber = { version = "0.3", default-features = false, features = ["env-filter", "fmt"] }
+tracing-subscriber = { version = "0.3", default-features = false, features = [
+    "env-filter",
+    "fmt",
+] }
