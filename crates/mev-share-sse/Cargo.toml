@@ -38,7 +38,7 @@ tracing.workspace = true
 
 [features]
 default = ["rustls"]
-rustls = ["reqwest/rustls"]
+rustls = ["reqwest/rustls-tls"]
 native-tls = ["reqwest/native-tls"]
 server = ["hyper", "http", "tokio-stream", "tokio-util", "tower"]
 
