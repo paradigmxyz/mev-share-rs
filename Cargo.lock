@@ -2115,7 +2115,7 @@ dependencies = [
 
 [[package]]
 name = "mev-share-sse"
-version = "0.3.0"
+version = "0.3.1"
 dependencies = [
  "alloy-primitives",
  "async-sse",
