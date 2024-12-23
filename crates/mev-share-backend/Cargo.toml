@@ -14,6 +14,7 @@ MEV-share backend support
 [dependencies]
 ## eth
 mev-share-rpc-api = { path = "../mev-share-rpc-api", features = ["client"] }
+alloy.workspace = true
 
 ## async
 pin-project-lite = "0.2"

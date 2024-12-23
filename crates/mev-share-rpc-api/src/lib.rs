@@ -16,10 +16,6 @@ mod eth;
 /// `flashbots` namespace
 mod flashbots;
 
-/// type bindings
-mod types;
-pub use types::*;
-
 /// flashbots-style auth
 mod auth;
 

@@ -1,10 +1,6 @@
 //! MEV-share event type bindings
 
-use ethers_core::{
-    abi::Address,
-    types::{Bytes, TxHash, H256, U256},
-    utils::hex,
-};
+use alloy_primitives::{Address, Bytes, B256, U256, TxHash, hex};
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use std::{array::TryFromSliceError, fmt::LowerHex, ops::Deref};
 
@@ -48,7 +44,7 @@ pub struct EventTransactionLog {
     /// (In solidity: The first topic is the hash of the signature of the event
     /// (e.g. `Deposit(address,bytes32,uint256)`), except you declared the event
     /// with the anonymous specifier.)
-    pub topics: Vec<H256>,
+    pub topics: Vec<B256>,
     /// The data of the log
     pub data: Bytes,
 }
@@ -84,7 +80,7 @@ pub struct EventHistory {
 pub struct Hint {
     #[serde(with = "null_sequence")]
     pub txs: Vec<EventTransaction>,
-    pub hash: H256,
+    pub hash: B256,
     #[serde(with = "null_sequence")]
     pub logs: Vec<EventTransactionLog>,
     #[serde(skip_serializing_if = "Option::is_none")]
