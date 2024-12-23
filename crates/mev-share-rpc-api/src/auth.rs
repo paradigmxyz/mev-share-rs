@@ -7,8 +7,8 @@ use std::{
     task::{Context, Poll},
 };
 
-use alloy_primitives::{B256, keccak256};
 use alloy::{hex, signers::Signer};
+use alloy_primitives::{keccak256, B256};
 use futures_util::future::BoxFuture;
 
 use http::{header::HeaderValue, HeaderName, Request};
@@ -97,13 +97,14 @@ where
             let body_bytes = hyper::body::to_bytes(body).await?;
 
             // sign request body and insert header
-            let signature = signer
-                .sign_message(keccak256(body_bytes.as_ref()).as_slice())
-                .await?;
+            let signature = signer.sign_message(keccak256(body_bytes.as_ref()).as_slice()).await?;
 
-            let header_val =
-                HeaderValue::from_str(&format!("{:?}:0x{}", signer.address(), hex::encode(signature.as_bytes().as_slice())))
-                    .expect("Header contains invalid characters");
+            let header_val = HeaderValue::from_str(&format!(
+                "{:?}:0x{}",
+                signer.address(),
+                hex::encode(signature.as_bytes().as_slice())
+            ))
+            .expect("Header contains invalid characters");
             parts.headers.insert(FLASHBOTS_HEADER.clone(), header_val);
 
             let request = Request::from_parts(parts, Body::from(body_bytes.clone()));
@@ -115,8 +116,8 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use alloy_primitives::PrimitiveSignature;
     use alloy::signers::local::PrivateKeySigner;
+    use alloy_primitives::PrimitiveSignature;
     use http::Response;
     use hyper::Body;
     use std::{convert::Infallible, str::FromStr};
@@ -160,10 +161,8 @@ mod tests {
         let header_signature = PrimitiveSignature::from_str(header_signature).unwrap();
 
         let signer_address = format!("{:?}", fb_signer.address());
-        let expected_signature = fb_signer
-            .sign_message(keccak256(bytes.clone()).as_slice())
-            .await
-            .unwrap();
+        let expected_signature =
+            fb_signer.sign_message(keccak256(bytes.clone()).as_slice()).await.unwrap();
 
         // verify that the header contains expected address and signature
         assert_eq!(header_address, signer_address);

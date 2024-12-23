@@ -1,4 +1,6 @@
-use alloy::rpc::types::mev::{SendBundleRequest, SendBundleResponse, SimBundleOverrides, SimBundleResponse};
+use alloy::rpc::types::mev::{
+    SendBundleRequest, SendBundleResponse, SimBundleOverrides, SimBundleResponse,
+};
 
 // re-export the rpc server trait
 #[cfg(feature = "server")]
@@ -8,7 +10,9 @@ pub use rpc::MevApiServer;
 ///
 /// This hides the generated client trait which is replaced by the `MevApiClient` trait.
 mod rpc {
-    use alloy::rpc::types::mev::{SendBundleRequest, SendBundleResponse, SimBundleOverrides, SimBundleResponse};
+    use alloy::rpc::types::mev::{
+        SendBundleRequest, SendBundleResponse, SimBundleOverrides, SimBundleResponse,
+    };
     use jsonrpsee::proc_macros::rpc;
 
     /// Mev rpc interface.

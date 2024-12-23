@@ -1,4 +1,7 @@
-use alloy::rpc::types::mev::{CancelBundleRequest, CancelPrivateTransactionRequest, EthBundleHash, EthCallBundleResponse, EthCallBundleTransactionResult, EthSendBundle, PrivateTransactionRequest};
+use alloy::rpc::types::mev::{
+    CancelBundleRequest, CancelPrivateTransactionRequest, EthBundleHash, EthCallBundleResponse,
+    EthCallBundleTransactionResult, EthSendBundle, PrivateTransactionRequest,
+};
 use alloy_primitives::{Bytes, B256};
 
 // re-export the rpc server trait
@@ -9,7 +12,10 @@ pub use rpc::EthBundleApiServer;
 ///
 /// This hides the generated client trait which is replaced by the `EthBundleApiClient` trait.
 mod rpc {
-    use alloy::rpc::types::mev::{CancelBundleRequest, CancelPrivateTransactionRequest, EthBundleHash, EthCallBundleResponse, EthCallBundleTransactionResult, EthSendBundle, PrivateTransactionRequest};
+    use alloy::rpc::types::mev::{
+        CancelBundleRequest, CancelPrivateTransactionRequest, EthBundleHash, EthCallBundleResponse,
+        EthCallBundleTransactionResult, EthSendBundle, PrivateTransactionRequest,
+    };
     use alloy_primitives::{Bytes, B256};
     use jsonrpsee::proc_macros::rpc;
 
