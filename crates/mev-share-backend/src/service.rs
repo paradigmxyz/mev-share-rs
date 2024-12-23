@@ -11,8 +11,9 @@ use std::{
 };
 
 use crate::{BundleSimulationOutcome, BundleSimulator, SimulatedBundle};
+use alloy::rpc::types::mev::{SendBundleRequest, SimBundleOverrides};
 use futures_util::{stream::FuturesUnordered, Stream, StreamExt};
-use mev_share_rpc_api::{jsonrpsee, SendBundleRequest, SimBundleOverrides};
+use mev_share_rpc_api::jsonrpsee;
 use pin_project_lite::pin_project;
 use tokio::sync::{mpsc, oneshot};
 use tracing::debug;

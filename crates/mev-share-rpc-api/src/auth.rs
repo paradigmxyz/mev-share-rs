@@ -7,8 +7,8 @@ use std::{
     task::{Context, Poll},
 };
 
-use ethers_core::{types::H256, utils::keccak256};
-use ethers_signers::Signer;
+use alloy::{hex, signers::Signer};
+use alloy_primitives::{keccak256, B256};
 use futures_util::future::BoxFuture;
 
 use http::{header::HeaderValue, HeaderName, Request};
@@ -52,7 +52,7 @@ where
     I: Service<Request<Body>> + Clone + Send + 'static,
     I::Future: Send,
     I::Error: Into<Box<dyn Error + Send + Sync>> + 'static,
-    S: Signer + Clone + Send + 'static,
+    S: Signer + Clone + Send + Sync + 'static,
 {
     type Response = I::Response;
     type Error = Box<dyn Error + Send + Sync>;
@@ -97,13 +97,14 @@ where
             let body_bytes = hyper::body::to_bytes(body).await?;
 
             // sign request body and insert header
-            let signature = signer
-                .sign_message(format!("0x{:x}", H256::from(keccak256(body_bytes.as_ref()))))
-                .await?;
+            let signature = signer.sign_message(keccak256(body_bytes.as_ref()).as_slice()).await?;
 
-            let header_val =
-                HeaderValue::from_str(&format!("{:?}:0x{}", signer.address(), signature))
-                    .expect("Header contains invalid characters");
+            let header_val = HeaderValue::from_str(&format!(
+                "{:?}:0x{}",
+                signer.address(),
+                hex::encode(signature.as_bytes().as_slice())
+            ))
+            .expect("Header contains invalid characters");
             parts.headers.insert(FLASHBOTS_HEADER.clone(), header_val);
 
             let request = Request::from_parts(parts, Body::from(body_bytes.clone()));
@@ -115,16 +116,17 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use ethers_core::rand::thread_rng;
-    use ethers_signers::LocalWallet;
+    use alloy::signers::local::PrivateKeySigner;
+    use alloy_primitives::PrimitiveSignature;
     use http::Response;
     use hyper::Body;
-    use std::convert::Infallible;
+    use std::{convert::Infallible, str::FromStr};
     use tower::{service_fn, ServiceExt};
 
     #[tokio::test]
     async fn test_signature() {
-        let fb_signer = LocalWallet::new(&mut thread_rng());
+        let fb_signer: PrivateKeySigner =
+            "4c0883a69102937d6231471b5dbb6204fe5129617082792ae468d01a3f362318".parse().unwrap();
 
         // mock service that returns the request headers
         let svc = FlashbotsSigner {
@@ -156,13 +158,11 @@ mod tests {
         let header = header.split(":0x").collect::<Vec<_>>();
         let header_address = header[0];
         let header_signature = header[1];
+        let header_signature = PrimitiveSignature::from_str(header_signature).unwrap();
 
         let signer_address = format!("{:?}", fb_signer.address());
-        let expected_signature = fb_signer
-            .sign_message(format!("0x{:x}", H256::from(keccak256(bytes.clone()))))
-            .await
-            .unwrap()
-            .to_string();
+        let expected_signature =
+            fb_signer.sign_message(keccak256(bytes.clone()).as_slice()).await.unwrap();
 
         // verify that the header contains expected address and signature
         assert_eq!(header_address, signer_address);
@@ -171,7 +171,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_skips_non_json() {
-        let fb_signer = LocalWallet::new(&mut thread_rng());
+        let fb_signer: PrivateKeySigner =
+            "4c0883a69102937d6231471b5dbb6204fe5129617082792ae468d01a3f362318".parse().unwrap();
 
         // mock service that returns the request headers
         let svc = FlashbotsSigner {
@@ -205,7 +206,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_returns_error_when_not_post() {
-        let fb_signer = LocalWallet::new(&mut thread_rng());
+        let fb_signer: PrivateKeySigner =
+            "4c0883a69102937d6231471b5dbb6204fe5129617082792ae468d01a3f362318".parse().unwrap();
 
         // mock service that returns the request headers
         let svc = FlashbotsSigner {

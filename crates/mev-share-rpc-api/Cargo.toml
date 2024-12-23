@@ -13,13 +13,12 @@ MEV-share RPC API trait definitions
 
 [dependencies]
 ## eth
-ethers-core.workspace = true
-ethers-signers.workspace = true
+alloy-primitives.workspace = true
+alloy.workspace = true
 
 ## misc
 jsonrpsee = { workspace = true, features = ["server", "macros"] }
 serde.workspace = true
-serde_json.workspace = true
 http.workspace = true
 hyper = { workspace = true, features = ["stream"] }
 tower.workspace = true
@@ -28,8 +27,8 @@ async-trait.workspace = true
 
 
 [dev-dependencies]
-serde_json.workspace = true
 tokio = { workspace = true, features = ["full"] }
+rand.workspace = true
 
 
 [features]

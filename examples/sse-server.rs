@@ -1,8 +1,9 @@
 //! SSE server example
+use alloy::rpc::types::mev::mevshare::Event;
 use alloy_primitives::B256;
 use futures_util::StreamExt;
 use hyper::{service::make_service_fn, Server};
-use mev_share_sse::{Event, EventClient};
+use mev_share_sse::EventClient;
 use std::net::SocketAddr;
 use tokio::sync::mpsc;
 use tracing_subscriber::{fmt, prelude::*, EnvFilter};

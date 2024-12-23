@@ -2,11 +2,12 @@
 
 use futures_util::StreamExt;
 
+use alloy::{
+    providers::{Provider, ProviderBuilder},
+    rpc::types::mev::{Inclusion, SendBundleRequest},
+};
 use jsonrpsee::http_client::HttpClientBuilder;
-use mev_share_rpc_api::{Inclusion, SendBundleRequest};
 use tracing_subscriber::{fmt, prelude::*, EnvFilter};
-
-use ethers_providers::Middleware;
 
 use mev_share_backend::{BundleSimulatorService, RpcSimulator};
 
@@ -20,10 +21,9 @@ async fn main() {
     let client = HttpClientBuilder::default().build(url).expect("Failed to create http client");
     let sim_client = RpcSimulator::new(client);
 
-    let eth_client =
-        ethers_providers::Provider::try_from(eth_rpc_url).expect("could not parse ETH_RPC_URL");
-    let current_block =
-        eth_client.get_block_number().await.expect("could not get block number").as_u64();
+    let eth_client = ProviderBuilder::new().on_http(eth_rpc_url.parse().unwrap());
+
+    let current_block = eth_client.get_block_number().await.expect("could not get block number");
 
     let sim = BundleSimulatorService::new(current_block, sim_client, Default::default());
 

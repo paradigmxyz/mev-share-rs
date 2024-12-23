@@ -1,4 +1,6 @@
-use crate::{SendBundleRequest, SendBundleResponse, SimBundleOverrides, SimBundleResponse};
+use alloy::rpc::types::mev::{
+    SendBundleRequest, SendBundleResponse, SimBundleOverrides, SimBundleResponse,
+};
 
 // re-export the rpc server trait
 #[cfg(feature = "server")]
@@ -8,7 +10,9 @@ pub use rpc::MevApiServer;
 ///
 /// This hides the generated client trait which is replaced by the `MevApiClient` trait.
 mod rpc {
-    use crate::{SendBundleRequest, SendBundleResponse, SimBundleOverrides, SimBundleResponse};
+    use alloy::rpc::types::mev::{
+        SendBundleRequest, SendBundleResponse, SimBundleOverrides, SimBundleResponse,
+    };
     use jsonrpsee::proc_macros::rpc;
 
     /// Mev rpc interface.
@@ -82,8 +86,7 @@ where
 mod tests {
     use super::*;
     use crate::FlashbotsSignerLayer;
-    use ethers_core::rand::thread_rng;
-    use ethers_signers::LocalWallet;
+    use alloy::signers::local::PrivateKeySigner;
     use jsonrpsee::http_client::{transport, HttpClientBuilder};
 
     struct Client {
@@ -92,7 +95,8 @@ mod tests {
 
     #[allow(dead_code)]
     async fn assert_mev_api_box() {
-        let fb_signer = LocalWallet::new(&mut thread_rng());
+        let fb_signer: PrivateKeySigner =
+            "4c0883a69102937d6231471b5dbb6204fe5129617082792ae468d01a3f362318".parse().unwrap();
         let http = HttpClientBuilder::default()
             .set_middleware(
                 tower::ServiceBuilder::new()

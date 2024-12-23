@@ -13,6 +13,3 @@ pub use client::EventClient;
 
 #[cfg(feature = "server")]
 pub mod server;
-
-mod types;
-pub use types::*;
