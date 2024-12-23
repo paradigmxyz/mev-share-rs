@@ -18,11 +18,8 @@ futures-util.workspace = true
 jsonrpsee = { workspace = true, features = ["client", "async-client"] }
 tower.workspace = true
 
-## eth 
-ethers-core.workspace = true
-ethers-providers.workspace = true
-ethers-signers.workspace = true
-ethers-middleware = "2.0"
+## eth
+alloy-primitives.workspace = true
 
 ## server
 hyper = { workspace = true, features = ["full"] }

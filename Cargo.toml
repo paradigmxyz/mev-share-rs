@@ -6,7 +6,7 @@ members = [
     "crates/mev-share",
 
     # Internal
-    "examples"
+    "examples",
 ]
 
 # Explicitly set the resolver to version 2, which is the default for packages with edition >= 2021
@@ -20,16 +20,16 @@ rust-version = "1.70"
 authors = ["mev-share-rs devs"]
 license = "MIT OR Apache-2.0"
 homepage = "https://github.com/paradigmxyz/mev-share-rs"
-repository ="https://github.com/paradigmxyz/mev-share-rs"
+repository = "https://github.com/paradigmxyz/mev-share-rs"
 
 [workspace.dependencies]
 ## workspace crates
-mev-share = { version = "0.1.4", path = "crates/mev-share" }
-mev-share-sse = { version = "0.1.4", path = "crates/mev-share-sse" }
-mev-share-rpc-api = { version = "0.1.4", path = "crates/mev-share-rpc-api" }
+mev-share = { path = "crates/mev-share" }
+mev-share-sse = { path = "crates/mev-share-sse" }
+mev-share-rpc-api = { path = "crates/mev-share-rpc-api" }
 
 ## eth
-alloy-primitives = { version = "0.8"}
+alloy-primitives = { version = "0.8", features = ["serde"] }
 alloy = { version = "0.8", features = ["full", "json-rpc", "signers", "serde", "rpc-types-mev"]}
 
 ## net

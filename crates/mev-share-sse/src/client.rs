@@ -1,6 +1,5 @@
 //! Server-sent events (SSE) support.
 
-use crate::types::*;
 use async_sse::Decoder;
 use bytes::Bytes;
 use futures_util::{
@@ -8,7 +7,7 @@ use futures_util::{
     Stream, TryFutureExt, TryStreamExt,
 };
 use pin_project_lite::pin_project;
-use reqwest::header::{self, HeaderMap, HeaderValue};
+use reqwest::header::{self, HeaderValue};
 use serde::{de::DeserializeOwned, Serialize};
 use std::{
     future::Future,
@@ -55,6 +54,11 @@ impl EventClient {
     /// Set the maximum number of retries.
     pub fn set_max_retries(&mut self, max_retries: u64) {
         self.max_retries = Some(max_retries);
+    }
+
+    /// Returns the maximum number of retries.
+    pub fn max_retries(&self) -> Option<u64> {
+        self.max_retries
     }
 
     /// Subscribe to the MEV-share SSE endpoint.
@@ -166,15 +170,7 @@ impl EventClient {
 
 impl Default for EventClient {
     fn default() -> Self {
-        Self::new(
-            reqwest::Client::builder()
-                .default_headers(HeaderMap::from_iter([
-                    (header::ACCEPT, HeaderValue::from_static("text/event-stream")),
-                    (header::CACHE_CONTROL, HeaderValue::from_static("no-cache")),
-                ]))
-                .build()
-                .expect("Reqwest client build failed, TLS backend not available?"),
-        )
+        Self::new(Default::default())
     }
 }
 
@@ -352,12 +348,16 @@ impl<T: DeserializeOwned> Stream for ActiveEventStream<T> {
     }
 }
 
+/// Creates a new SSE stream.
 async fn new_stream<T: DeserializeOwned, S: Serialize>(
     client: &reqwest::Client,
     endpoint: &str,
     query: Option<S>,
 ) -> reqwest::Result<ActiveEventStream<T>> {
-    let mut builder = client.get(endpoint);
+    let mut builder = client
+        .get(endpoint)
+        .header(header::ACCEPT, HeaderValue::from_static("text/event-stream"))
+        .header(header::CACHE_CONTROL, HeaderValue::from_static("no-cache"));
     if let Some(query) = query {
         builder = builder.query(&query);
     }
@@ -409,10 +409,10 @@ mod tests {
     const HISTORY_INFO_V1: &str = "https://mev-share.flashbots.net/api/v1/history/info";
 
     fn init_tracing() {
-        tracing_subscriber::registry()
+        let _ = tracing_subscriber::registry()
             .with(fmt::layer())
             .with(EnvFilter::from_default_env())
-            .init();
+            .try_init();
     }
 
     #[tokio::test]
