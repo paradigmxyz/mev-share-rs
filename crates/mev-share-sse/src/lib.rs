@@ -1,4 +1,4 @@
-#![warn(missing_docs, unreachable_pub, unused_crate_dependencies)]
+#![warn(missing_docs, unreachable_pub)]
 #![deny(unused_must_use, rust_2018_idioms)]
 #![doc(test(
     no_crate_inject,
@@ -14,5 +14,4 @@ pub use client::EventClient;
 #[cfg(feature = "server")]
 pub mod server;
 
-mod types;
-pub use types::*;
+pub use alloy_rpc_types_mev::mevshare::*;

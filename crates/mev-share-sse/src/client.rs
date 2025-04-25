@@ -1,6 +1,6 @@
 //! Server-sent events (SSE) support.
 
-use crate::types::*;
+use alloy_rpc_types_mev::mevshare::{Event, EventHistory, EventHistoryInfo, EventHistoryParams};
 use async_sse::Decoder;
 use bytes::Bytes;
 use futures_util::{
