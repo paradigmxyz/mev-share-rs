@@ -30,7 +30,7 @@ mev-share-rpc-api = { path = "crates/mev-share-rpc-api" }
 
 ## eth
 alloy-primitives = { version = "1.0.0", features = ["serde"] }
-alloy-rpc-types-mev = "*"
+alloy-rpc-types-mev = ">= 0.15"
 ethers-core = { version = "2.0", default-features = false }
 ethers-signers = "2.0"
 ethers-providers = "2.0"
