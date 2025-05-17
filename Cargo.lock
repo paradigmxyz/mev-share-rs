@@ -1472,7 +1472,7 @@ dependencies = [
  "mev-share-rpc-api",
  "mev-share-sse",
  "tokio",
- "tower 0.4.13",
+ "tower 0.5.2",
  "tracing",
  "tracing-subscriber",
 ]
@@ -2687,7 +2687,7 @@ dependencies = [
  "serde",
  "serde_json",
  "tokio",
- "tower 0.4.13",
+ "tower 0.5.2",
 ]
 
 [[package]]
@@ -2709,7 +2709,7 @@ dependencies = [
  "tokio",
  "tokio-stream",
  "tokio-util",
- "tower 0.4.13",
+ "tower 0.5.2",
  "tracing",
  "tracing-subscriber",
 ]
