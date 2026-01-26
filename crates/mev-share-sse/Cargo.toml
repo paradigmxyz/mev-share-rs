@@ -14,16 +14,14 @@ MEV-share Server Side Events support in rust
 alloy-rpc-types-mev.workspace = true
 
 ## async
-async-sse = "5.1"
+eventsource-stream = "0.2"
 reqwest = { version = "0.12", default-features = false, features = [
     "stream",
     "json",
 ] }
 futures-util = { workspace = true, features = ["io"] }
-http-types = { version = "2.12", default-features = false }
 tower = { workspace = true, optional = true }
 hyper = { workspace = true, features = ["stream"], optional = true }
-tokio-util = { version = "0.7", features = ["compat"], optional = true }
 tokio-stream = { version = "0.1", features = ["sync"], optional = true }
 
 ## misc
@@ -40,7 +38,7 @@ tracing.workspace = true
 default = ["rustls"]
 rustls = ["reqwest/rustls-tls"]
 native-tls = ["reqwest/native-tls"]
-server = ["hyper", "http", "tokio-stream", "tokio-util", "tower"]
+server = ["hyper", "http", "tokio-stream", "tower"]
 
 [dev-dependencies]
 tokio = { workspace = true, features = ["macros", "rt", "rt-multi-thread"] }
