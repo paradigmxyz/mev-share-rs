@@ -4,7 +4,6 @@ version = "0.5.1"
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
-homepage.workspace = true
 repository.workspace = true
 description = """
 MEV-share Server Side Events support in rust
