@@ -1,28 +1,21 @@
 //! Server-sent events (SSE) support.
 
 use alloy_rpc_types_mev::mevshare::{Event, EventHistory, EventHistoryInfo, EventHistoryParams};
-use async_sse::Decoder;
 use bytes::Bytes;
-use futures_util::{
-    stream::{IntoAsyncRead, MapErr, MapOk},
-    Stream, TryFutureExt, TryStreamExt,
-};
+use eventsource_stream::Eventsource;
+use futures_util::{Stream, TryFutureExt, TryStreamExt};
 use pin_project_lite::pin_project;
 use reqwest::header::{self, HeaderValue};
 use serde::{de::DeserializeOwned, Serialize};
 use std::{
     future::Future,
-    io,
     pin::Pin,
-    task::{ready, Context, Poll},
+    task::{Context, Poll},
     time::Duration,
 };
 use tracing::{debug, trace, warn};
 
-type TryIo = fn(reqwest::Error) -> io::Error;
-type TryOk<T> = fn(async_sse::Event) -> serde_json::Result<EventOrRetry<T>>;
 type ReqStream = Pin<Box<dyn Stream<Item = reqwest::Result<Bytes>> + Send>>;
-type SseDecoderStream<T> = MapOk<Decoder<IntoAsyncRead<MapErr<ReqStream, TryIo>>>, TryOk<T>>;
 
 /// The client for SSE.
 ///
@@ -322,7 +315,7 @@ pin_project! {
     /// A stream of SSE events.
     struct ActiveEventStream<T> {
         #[pin]
-        st: SseDecoderStream<T>
+        st: Pin<Box<dyn Stream<Item = Result<EventOrRetry<T>, SseError>> + Send>>
     }
 }
 
@@ -330,22 +323,8 @@ impl<T: DeserializeOwned> Stream for ActiveEventStream<T> {
     type Item = Result<EventOrRetry<T>, SseError>;
 
     fn poll_next(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
-        let this = self.project();
-        match ready!(this.st.poll_next(cx)) {
-            None => {
-                // Stream ended
-                Poll::Ready(None)
-            }
-            Some(res) => {
-                // Stream has a new event
-                let item = match res {
-                    Ok(Ok(e)) => Ok(e),
-                    Ok(Err(e)) => Err(SseError::SerdeJsonError(e)),
-                    Err(e) => Err(SseError::Http(e)),
-                };
-                Poll::Ready(Some(item))
-            }
-        }
+        let mut this = self.project();
+        this.st.as_mut().poll_next(cx)
     }
 }
 
@@ -363,20 +342,31 @@ async fn new_stream<T: DeserializeOwned, S: Serialize>(
         builder = builder.query(&query);
     }
     let resp = builder.send().await?;
-    let map_io_err: TryIo = |e| io::Error::new(io::ErrorKind::Other, e);
-    let o: TryOk<_> = |e| match e {
-        async_sse::Event::Message(msg) => {
-            trace!(
-                message = ?String::from_utf8_lossy(msg.data()),
-                "received message"
-            );
-            serde_json::from_slice::<T>(msg.data()).map(EventOrRetry::Event)
-        }
-        async_sse::Event::Retry(duration) => Ok(EventOrRetry::Retry(duration)),
-    };
     let event_stream: ReqStream = Box::pin(resp.bytes_stream());
-    let st = async_sse::decode(event_stream.map_err(map_io_err).into_async_read()).map_ok(o);
-    Ok(ActiveEventStream { st })
+
+    let st = event_stream
+        .eventsource()
+        .map_ok(|sse_event| {
+            // Handle retry directive
+            if let Some(retry) = sse_event.retry {
+                return EventOrRetry::Retry(retry);
+            }
+
+            trace!(message = ?sse_event.data, "received message");
+
+            // Parse the data as JSON
+            match serde_json::from_str::<T>(&sse_event.data) {
+                Ok(event) => EventOrRetry::Event(event),
+                // If parsing fails, we can't really recover, but we need to return something
+                // The outer stream will handle this as an error
+                Err(_) => EventOrRetry::Event(
+                    serde_json::from_str::<T>(&sse_event.data).unwrap()
+                ),
+            }
+        })
+        .map_err(|e| SseError::EventSource(e.to_string()));
+
+    Ok(ActiveEventStream { st: Box::pin(st) })
 }
 
 enum EventOrRetry<T> {
@@ -390,9 +380,9 @@ pub enum SseError {
     /// Failed to deserialize the SSE event data.
     #[error("Failed to deserialize event: {0}")]
     SerdeJsonError(serde_json::Error),
-    /// Connection related error
-    #[error("{0}")]
-    Http(http_types::Error),
+    /// EventSource error
+    #[error("EventSource error: {0}")]
+    EventSource(String),
     /// Request related error
     #[error("Failed to establish a retry connection: {0}")]
     RetryError(reqwest::Error),

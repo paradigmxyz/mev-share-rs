@@ -1,5 +1,6 @@
 //! SSE server side support.
 
+use bytes::Bytes;
 use futures_util::{Stream, StreamExt};
 use http::{
     header::{CACHE_CONTROL, CONTENT_TYPE},
@@ -18,7 +19,6 @@ use std::{
 };
 use tokio::sync::broadcast;
 use tokio_stream::wrappers::BroadcastStream;
-use tokio_util::{compat::FuturesAsyncReadCompatExt, io::ReaderStream};
 use tower::{Layer, Service};
 use tracing::debug;
 
@@ -125,6 +125,16 @@ impl Stream for SseBroadcastStream {
     }
 }
 
+/// Encode a data string as an SSE message.
+fn encode_sse_message(data: &str) -> Bytes {
+    // SSE format: "data: <content>\n\n"
+    let mut msg = String::with_capacity(data.len() + 8);
+    msg.push_str("data: ");
+    msg.push_str(data);
+    msg.push_str("\n\n");
+    Bytes::from(msg)
+}
+
 /// A service impl that handles SSE requests.
 ///
 ///
@@ -177,13 +187,10 @@ where
                         .expect("failed to build response"))
                 }
             };
-            let (sender, encoder) = async_sse::encode();
 
-            tokio::task::spawn(async move {
-                let mut st = st;
-                while let Some(data) = st.next().await {
-                    let _ = sender.send(None, data.as_ref(), None).await;
-                }
+            // Map the stream to SSE-encoded bytes
+            let sse_stream = st.map(|item| {
+                Ok::<_, std::convert::Infallible>(encode_sse_message(item.as_ref()))
             });
 
             // Perform the handshake as described here:
@@ -192,7 +199,7 @@ where
                 .status(StatusCode::OK)
                 .header(CACHE_CONTROL, "no-cache")
                 .header(CONTENT_TYPE, "text/event-stream")
-                .body(Body::wrap_stream(ReaderStream::new(encoder.compat())))
+                .body(Body::wrap_stream(sse_stream))
                 .map_err(|err| err.into())
         };
 
